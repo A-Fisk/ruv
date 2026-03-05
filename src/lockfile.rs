@@ -35,7 +35,28 @@ fn write_lockfile_to(
         if let Some(pkg) = index.get(name) {
             out.push_str("[[package]]\n");
             out.push_str(&format!("name = \"{}\"\n", name));
-            out.push_str(&format!("version = \"{}\"\n\n", pkg.version));
+            out.push_str(&format!("version = \"{}\"\n", pkg.version));
+            if !pkg.deps.is_empty() {
+                let mut sorted_deps = pkg.deps.clone();
+                sorted_deps.sort();
+                // only include deps that are in the resolved package list
+                let resolved_deps: Vec<_> = sorted_deps
+                    .iter()
+                    .filter(|d| packages.contains(d))
+                    .collect();
+                if !resolved_deps.is_empty() {
+                    out.push_str("dependencies = [");
+                    out.push_str(
+                        &resolved_deps
+                            .iter()
+                            .map(|d| format!("{{ name = \"{}\" }}", d))
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                    );
+                    out.push_str("]\n");
+                }
+            }
+            out.push('\n');
         }
     }
     std::fs::write(path, out).unwrap();
@@ -73,6 +94,9 @@ fn parse_lockfile(text: &str) -> Vec<(String, String)> {
     struct LockedPackage {
         name: String,
         version: String,
+        #[serde(default)]
+        #[allow(dead_code)]
+        dependencies: Vec<toml::Value>, // present but not used during sync
     }
     let lf: RawLockfile = toml::from_str(text).expect("failed to parse arrrv.lock");
     lf.package
