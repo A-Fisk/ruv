@@ -1,9 +1,11 @@
 use flate2::read::GzDecoder;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Read;
 use std::time::Duration;
 use crate::cache::cache_dir;
 
+#[derive(Serialize, Deserialize)]
 pub struct Package {
     pub version: String,
     pub deps: Vec<String>,
@@ -66,37 +68,47 @@ pub fn parse_packages(text: &str) -> HashMap<String, Package> {
     index
 }
 
-fn parse_from_bytes(bytes: &[u8]) -> HashMap<String, Package> {
-    let mut decoder = GzDecoder::new(bytes);
-    let mut text = String::new();
-    decoder.read_to_string(&mut text).unwrap();
-    parse_packages(&text)
+fn is_fresh(path: &std::path::Path) -> bool {
+    std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .map(|t| t.elapsed().unwrap_or(Duration::MAX) < Duration::from_secs(86400))
+        .unwrap_or(false)
 }
 
 pub fn fetch_cran_index() -> HashMap<String, Package> {
-    let cache_path = cache_dir().join("index/PACKAGES.gz");
-
-    // use cached index if it exists and is less than 24 hours old
-    if let Ok(metadata) = std::fs::metadata(&cache_path) {
-        if let Ok(modified) = metadata.modified() {
-            let age = modified.elapsed().unwrap_or(Duration::MAX);
-            if age < Duration::from_secs(86400) {
-                println!("using cached CRAN index");
-                let bytes = std::fs::read(&cache_path).unwrap();
-                return parse_from_bytes(&bytes);
-            }
+    let bin_path = cache_dir().join("index/packages.bin");
+    let gz_path  = cache_dir().join("index/PACKAGES.gz");
+    // fast path: deserialise pre-parsed binary cache
+    if is_fresh(&bin_path) {
+        let bytes = std::fs::read(&bin_path).unwrap();
+        if let Ok(index) = bincode::deserialize::<HashMap<String, Package>>(&bytes) {
+            return index;
         }
     }
 
-    println!("fetching CRAN package index...");
-    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
-    let bytes = response.bytes().unwrap();
+    // fetch or read cached gzip
+    let gz_bytes = if is_fresh(&gz_path) {
+        std::fs::read(&gz_path).unwrap()
+    } else {
+        println!("fetching CRAN package index...");
+        let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
+        let bytes = response.bytes().unwrap().to_vec();
+        std::fs::create_dir_all(gz_path.parent().unwrap()).unwrap();
+        std::fs::write(&gz_path, &bytes).unwrap();
+        bytes
+    };
 
-    // save to cache for next time
-    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-    std::fs::write(&cache_path, &bytes).unwrap();
+    // parse
+    let mut decoder = GzDecoder::new(gz_bytes.as_slice());
+    let mut text = String::new();
+    decoder.read_to_string(&mut text).unwrap();
+    let index = parse_packages(&text);
 
-    parse_from_bytes(&bytes)
+    // write binary cache for next run
+    let encoded = bincode::serialize(&index).unwrap();
+    std::fs::write(&bin_path, encoded).unwrap();
+
+    index
 }
 
 #[cfg(test)]
