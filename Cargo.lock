@@ -70,6 +70,7 @@ dependencies = [
  "reqwest",
  "serde",
  "tar",
+ "tempfile",
  "toml",
 ]
 
