@@ -5,8 +5,9 @@
 /arrrv_lib
 /.arrrv
 
-# Force-include Cargo.lock (overrides global *.lock rule)
+# Force-include lock files (overrides global *.lock rule)
 !Cargo.lock
+!arrrv.lock
 
 # macOS
 .DS_Store

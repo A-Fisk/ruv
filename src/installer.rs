@@ -37,7 +37,31 @@ pub fn get_r_version() -> &'static str {
     })
 }
 
-/// Returns (name, version, url) tuples for each package
+fn make_url(name: &str, version: &str, arch: &str, r_version: &str) -> String {
+    format!(
+        "https://cloud.r-project.org/bin/macosx/{}/contrib/{}/{}_{}.tgz",
+        arch, r_version, name, version
+    )
+}
+
+/// Returns (name, version, url) tuples from lockfile (name, version) pairs.
+/// Does not require the CRAN index.
+pub fn build_urls_from_pairs(packages: &[(String, String)]) -> Vec<(String, String, String)> {
+    let arch = get_arch();
+    let r_version = get_r_version();
+    packages
+        .iter()
+        .map(|(name, version)| {
+            (
+                name.clone(),
+                version.clone(),
+                make_url(name, version, arch, r_version),
+            )
+        })
+        .collect()
+}
+
+/// Returns (name, version, url) tuples for each package, looking up versions in the CRAN index.
 pub fn build_urls(
     packages: &[String],
     index: &HashMap<String, Package>,
@@ -49,10 +73,7 @@ pub fn build_urls(
         .iter()
         .filter_map(|name| {
             let pkg = index.get(name)?;
-            let url = format!(
-                "https://cloud.r-project.org/bin/macosx/{}/contrib/{}/{}_{}.tgz",
-                arch, r_version, name, pkg.version
-            );
+            let url = make_url(name, &pkg.version, arch, r_version);
             Some((name.clone(), pkg.version.clone(), url))
         })
         .collect()

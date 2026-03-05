@@ -10,8 +10,8 @@ mod resolver;
 
 use config::{parse_dep_name, read_config};
 use index::fetch_cran_index;
-use installer::{build_urls, download_and_install};
-use lockfile::write_lockfile;
+use installer::{build_urls, build_urls_from_pairs, download_and_install};
+use lockfile::{lockfile_is_fresh, read_lockfile, write_lockfile};
 use resolver::{resolve, resolve_all};
 
 const LIB_DIR: &str = ".arrrv/library";
@@ -33,8 +33,10 @@ enum Commands {
         /// Name of the package to install
         package: String,
     },
-    /// Sync project library from arrrv.toml
+    /// Install from arrrv.lock (error if lockfile missing or stale)
     Sync,
+    /// Resolve dependencies from arrrv.toml and write arrrv.lock
+    Lock,
     /// Add a package to arrrv.toml and sync
     Add {
         /// Name of the package to add
@@ -89,7 +91,7 @@ fn main() {
             }
         }
 
-        Commands::Sync => {
+        Commands::Lock => {
             let config = read_config();
             let roots: Vec<String> = config
                 .project
@@ -101,12 +103,31 @@ fn main() {
             let t = Instant::now();
             let index = fetch_cran_index();
             let all = resolve_all(&roots, &index);
-            let packages = build_urls(&all, &index);
             println!(
                 "Resolved {} packages in {}",
                 all.len(),
                 fmt_duration(t.elapsed().as_millis())
             );
+
+            write_lockfile(&roots, &all, &index);
+        }
+
+        Commands::Sync => {
+            let config = read_config();
+            let roots: Vec<String> = config
+                .project
+                .dependencies
+                .iter()
+                .map(|d| parse_dep_name(d))
+                .collect();
+
+            if !lockfile_is_fresh(&roots) {
+                eprintln!("error: arrrv.lock is missing or out of date — run `arrrv lock` first");
+                std::process::exit(1);
+            }
+
+            let locked = read_lockfile();
+            let packages = build_urls_from_pairs(&locked);
 
             if verbose {
                 println!("  lib_dir:  {}", LIB_DIR);
@@ -129,12 +150,11 @@ fn main() {
                     fmt_duration(t.elapsed().as_millis())
                 );
             }
-            write_lockfile(&all, &index);
         }
 
         Commands::Add { package } => {
             println!(
-                "add \"{}\" to your arrrv.toml dependencies, then run arrrv sync",
+                "add \"{}\" to your arrrv.toml dependencies, then run `arrrv lock && arrrv sync`",
                 package
             );
             println!("  dependencies = [\"{}\"]", package);
@@ -142,7 +162,7 @@ fn main() {
 
         Commands::Run { args } => {
             let lib_dir = std::fs::canonicalize(LIB_DIR)
-                .expect("no project library found — run arrrv sync first");
+                .expect("no project library found — run `arrrv lock && arrrv sync` first");
 
             std::process::Command::new("Rscript")
                 .args(&args)

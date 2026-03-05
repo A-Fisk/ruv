@@ -1,0 +1,367 @@
+# arrrv.lock — generated, do not edit
+
+version = 1
+
+[manifest]
+dependencies = ["dplyr", "ggplot2", "tidymodels"]
+
+[[package]]
+name = "DiceDesign"
+version = "1.10"
+
+[[package]]
+name = "GPfit"
+version = "1.0-9"
+
+[[package]]
+name = "KernSmooth"
+version = "2.23-26"
+
+[[package]]
+name = "MASS"
+version = "7.3-65"
+
+[[package]]
+name = "Matrix"
+version = "1.7-4"
+
+[[package]]
+name = "R6"
+version = "2.6.1"
+
+[[package]]
+name = "RColorBrewer"
+version = "1.1-3"
+
+[[package]]
+name = "Rcpp"
+version = "1.1.1"
+
+[[package]]
+name = "S7"
+version = "0.2.1"
+
+[[package]]
+name = "SQUAREM"
+version = "2021.1"
+
+[[package]]
+name = "backports"
+version = "1.5.0"
+
+[[package]]
+name = "broom"
+version = "1.0.12"
+
+[[package]]
+name = "cachem"
+version = "1.1.0"
+
+[[package]]
+name = "class"
+version = "7.3-23"
+
+[[package]]
+name = "cli"
+version = "3.6.5"
+
+[[package]]
+name = "clock"
+version = "0.7.4"
+
+[[package]]
+name = "codetools"
+version = "0.2-20"
+
+[[package]]
+name = "conflicted"
+version = "1.2.0"
+
+[[package]]
+name = "data.table"
+version = "1.18.2.1"
+
+[[package]]
+name = "diagram"
+version = "1.6.5"
+
+[[package]]
+name = "dials"
+version = "1.4.2"
+
+[[package]]
+name = "digest"
+version = "0.6.39"
+
+[[package]]
+name = "dplyr"
+version = "1.2.0"
+
+[[package]]
+name = "farver"
+version = "2.1.2"
+
+[[package]]
+name = "fastmap"
+version = "1.2.0"
+
+[[package]]
+name = "furrr"
+version = "0.3.1"
+
+[[package]]
+name = "future"
+version = "1.69.0"
+
+[[package]]
+name = "future.apply"
+version = "1.20.2"
+
+[[package]]
+name = "generics"
+version = "0.1.4"
+
+[[package]]
+name = "ggplot2"
+version = "4.0.2"
+
+[[package]]
+name = "globals"
+version = "0.19.0"
+
+[[package]]
+name = "glue"
+version = "1.8.0"
+
+[[package]]
+name = "gower"
+version = "1.0.2"
+
+[[package]]
+name = "gtable"
+version = "0.3.6"
+
+[[package]]
+name = "hardhat"
+version = "1.4.2"
+
+[[package]]
+name = "infer"
+version = "1.1.0"
+
+[[package]]
+name = "ipred"
+version = "0.9-15"
+
+[[package]]
+name = "isoband"
+version = "0.3.0"
+
+[[package]]
+name = "labeling"
+version = "0.4.3"
+
+[[package]]
+name = "lattice"
+version = "0.22-9"
+
+[[package]]
+name = "lava"
+version = "1.8.2"
+
+[[package]]
+name = "lhs"
+version = "1.2.1"
+
+[[package]]
+name = "lifecycle"
+version = "1.0.5"
+
+[[package]]
+name = "listenv"
+version = "0.10.0"
+
+[[package]]
+name = "lubridate"
+version = "1.9.5"
+
+[[package]]
+name = "magrittr"
+version = "2.0.4"
+
+[[package]]
+name = "memoise"
+version = "2.0.1"
+
+[[package]]
+name = "modeldata"
+version = "1.5.1"
+
+[[package]]
+name = "modelenv"
+version = "0.2.0"
+
+[[package]]
+name = "nnet"
+version = "7.3-20"
+
+[[package]]
+name = "numDeriv"
+version = "2016.8-1.1"
+
+[[package]]
+name = "parallelly"
+version = "1.46.1"
+
+[[package]]
+name = "parsnip"
+version = "1.4.1"
+
+[[package]]
+name = "patchwork"
+version = "1.3.2"
+
+[[package]]
+name = "pillar"
+version = "1.11.1"
+
+[[package]]
+name = "pkgconfig"
+version = "2.0.3"
+
+[[package]]
+name = "prettyunits"
+version = "1.2.0"
+
+[[package]]
+name = "prodlim"
+version = "2025.04.28"
+
+[[package]]
+name = "progressr"
+version = "0.18.0"
+
+[[package]]
+name = "purrr"
+version = "1.2.1"
+
+[[package]]
+name = "recipes"
+version = "1.3.1"
+
+[[package]]
+name = "rlang"
+version = "1.1.7"
+
+[[package]]
+name = "rpart"
+version = "4.1.24"
+
+[[package]]
+name = "rsample"
+version = "1.3.2"
+
+[[package]]
+name = "rstudioapi"
+version = "0.18.0"
+
+[[package]]
+name = "scales"
+version = "1.4.0"
+
+[[package]]
+name = "sfd"
+version = "0.1.0"
+
+[[package]]
+name = "shape"
+version = "1.4.6.1"
+
+[[package]]
+name = "slider"
+version = "0.3.3"
+
+[[package]]
+name = "sparsevctrs"
+version = "0.3.6"
+
+[[package]]
+name = "stringi"
+version = "1.8.7"
+
+[[package]]
+name = "stringr"
+version = "1.6.0"
+
+[[package]]
+name = "survival"
+version = "3.8-6"
+
+[[package]]
+name = "tailor"
+version = "0.1.0"
+
+[[package]]
+name = "tibble"
+version = "3.3.1"
+
+[[package]]
+name = "tidymodels"
+version = "1.4.1"
+
+[[package]]
+name = "tidyr"
+version = "1.3.2"
+
+[[package]]
+name = "tidyselect"
+version = "1.2.1"
+
+[[package]]
+name = "timeDate"
+version = "4052.112"
+
+[[package]]
+name = "timechange"
+version = "0.4.0"
+
+[[package]]
+name = "tune"
+version = "2.0.1"
+
+[[package]]
+name = "tzdb"
+version = "0.5.0"
+
+[[package]]
+name = "utf8"
+version = "1.2.6"
+
+[[package]]
+name = "vctrs"
+version = "0.7.1"
+
+[[package]]
+name = "viridisLite"
+version = "0.4.3"
+
+[[package]]
+name = "warp"
+version = "0.2.3"
+
+[[package]]
+name = "withr"
+version = "3.0.2"
+
+[[package]]
+name = "workflows"
+version = "1.3.0"
+
+[[package]]
+name = "workflowsets"
+version = "1.1.1"
+
+[[package]]
+name = "yardstick"
+version = "1.3.2"
+
