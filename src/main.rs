@@ -60,10 +60,10 @@ fn main() {
             let t = Instant::now();
             let index = fetch_cran_index();
             let deps = resolve(&package, &index);
+            let packages = build_urls(&deps, &index);
             println!("Resolved {} packages in {}", deps.len(), fmt_duration(t.elapsed().as_millis()));
 
             let t = Instant::now();
-            let packages = build_urls(&deps, &index);
             let (audited, installed) = download_and_install(&packages, LIB_DIR);
             if audited > 0 {
                 println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
@@ -83,10 +83,10 @@ fn main() {
             let t = Instant::now();
             let index = fetch_cran_index();
             let all = resolve_all(&roots, &index);
+            let packages = build_urls(&all, &index);
             println!("Resolved {} packages in {}", all.len(), fmt_duration(t.elapsed().as_millis()));
 
             let t = Instant::now();
-            let packages = build_urls(&all, &index);
             let (audited, installed) = download_and_install(&packages, LIB_DIR);
             if audited > 0 {
                 println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
