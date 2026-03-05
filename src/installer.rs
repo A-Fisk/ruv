@@ -3,6 +3,8 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::io::Read;
+use std::path::Path;
+use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
 use crate::index::Package;
 
 pub fn get_arch() -> &'static str {
@@ -27,7 +29,8 @@ pub fn get_r_version() -> String {
         .join(".")
 }
 
-pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<String> {
+/// Returns (name, version, url) tuples for each package
+pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<(String, String, String)> {
     let arch = get_arch();
     let r_version = get_r_version();
 
@@ -38,13 +41,14 @@ pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<
                 "https://cloud.r-project.org/bin/macosx/{}/contrib/{}/{}_{}.tgz",
                 arch, r_version, name, pkg.version
             );
-            Some(url)
+            Some((name.clone(), pkg.version.clone(), url))
         })
         .collect()
 }
 
-pub fn download_and_install(urls: &[String], lib_dir: &str) {
-    std::fs::create_dir_all(lib_dir).unwrap();
+pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str) {
+    let lib_path = Path::new(lib_dir);
+    std::fs::create_dir_all(lib_path).unwrap();
 
     let mp = MultiProgress::new();
 
@@ -60,18 +64,21 @@ pub fn download_and_install(urls: &[String], lib_dir: &str) {
     .unwrap()
     .progress_chars("━━╌");
 
-    let overall = mp.add(ProgressBar::new(urls.len() as u64));
+    let overall = mp.add(ProgressBar::new(packages.len() as u64));
     overall.set_style(overall_style);
     overall.set_message("Installing packages");
 
-    urls.par_iter().for_each(|url| {
-        // extract package name from URL: "ggplot2_3.5.1.tgz" → "ggplot2"
-        let filename = url.split('/').last().unwrap_or(url);
-        let pkg_name = filename.split('_').next().unwrap_or(filename);
+    packages.par_iter().for_each(|(name, version, url)| {
+        // cache hit — hard-link directly into project library, no download needed
+        if is_cached(name, version) {
+            hard_link_into_library(name, version, lib_path);
+            overall.inc(1);
+            return;
+        }
 
         let pb = mp.add(ProgressBar::new(0));
         pb.set_style(pkg_style.clone());
-        pb.set_message(pkg_name.to_string());
+        pb.set_message(name.clone());
 
         let response = reqwest::blocking::get(url).unwrap();
         let total = response.content_length().unwrap_or(0);
@@ -83,9 +90,16 @@ pub fn download_and_install(urls: &[String], lib_dir: &str) {
         src.read_to_end(&mut bytes).unwrap();
         pb.finish_and_clear();
 
+        // extract to cache: unpacks {name}/ into packages dir, then rename to {name}_{version}/
+        let packages_dir = cache_dir().join("packages");
+        std::fs::create_dir_all(&packages_dir).unwrap();
         let decoder = GzDecoder::new(bytes.as_slice());
         let mut archive = tar::Archive::new(decoder);
-        archive.unpack(lib_dir).unwrap();
+        archive.unpack(&packages_dir).unwrap();
+        std::fs::rename(packages_dir.join(name), package_cache_path(name, version)).unwrap();
+
+        // hard-link from cache into project library
+        hard_link_into_library(name, version, lib_path);
 
         overall.inc(1);
     });

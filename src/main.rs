@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod cache;
 mod config;
 mod index;
 mod installer;
@@ -11,6 +12,8 @@ use index::fetch_cran_index;
 use installer::{build_urls, download_and_install};
 use lockfile::write_lockfile;
 use resolver::{resolve, resolve_all};
+
+const LIB_DIR: &str = ".arrrv/library";
 
 #[derive(Parser)]
 #[command(name = "arrrv", about = "A fast R package manager")]
@@ -33,6 +36,11 @@ enum Commands {
         /// Name of the package to add
         package: String,
     },
+    /// Run a script with the project library
+    Run {
+        /// Arguments to pass to Rscript (e.g. analysis.R or -e "library(ggplot2)")
+        args: Vec<String>,
+    },
 }
 
 fn main() {
@@ -44,9 +52,9 @@ fn main() {
             println!("resolving dependencies for {}...", package);
             let deps = resolve(&package, &index);
             println!("installing {} packages...", deps.len());
-            let urls = build_urls(&deps, &index);
-            download_and_install(&urls, "./arrrv_lib");
-            println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library({})\"", package);
+            let packages = build_urls(&deps, &index);
+            download_and_install(&packages, LIB_DIR);
+            println!("done! run with: arrrv run -e \"library({})\"", package);
         }
 
         Commands::Sync => {
@@ -59,15 +67,26 @@ fn main() {
             let index = fetch_cran_index();
             let all = resolve_all(&roots, &index);
             println!("installing {} packages total...", all.len());
-            let urls = build_urls(&all, &index);
-            download_and_install(&urls, "./arrrv_lib");
+            let packages = build_urls(&all, &index);
+            download_and_install(&packages, LIB_DIR);
             write_lockfile(&all, &index);
-            println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library(...)\"");
+            println!("done! use arrrv run to execute scripts with the project library");
         }
 
         Commands::Add { package } => {
             println!("add \"{}\" to your arrrv.toml dependencies, then run arrrv sync", package);
             println!("  dependencies = [\"{}\"]", package);
+        }
+
+        Commands::Run { args } => {
+            let lib_dir = std::fs::canonicalize(LIB_DIR)
+                .expect("no project library found — run arrrv sync first");
+
+            std::process::Command::new("Rscript")
+                .args(&args)
+                .env("R_LIBS", lib_dir)
+                .status()
+                .unwrap();
         }
     }
 }

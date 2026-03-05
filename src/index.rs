@@ -1,6 +1,8 @@
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
 use std::io::Read;
+use std::time::Duration;
+use crate::cache::cache_dir;
 
 pub struct Package {
     pub version: String,
@@ -64,14 +66,37 @@ pub fn parse_packages(text: &str) -> HashMap<String, Package> {
     index
 }
 
-pub fn fetch_cran_index() -> HashMap<String, Package> {
-    println!("fetching CRAN package index...");
-    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
-    let bytes = response.bytes().unwrap();
-    let mut decoder = GzDecoder::new(&bytes[..]);
+fn parse_from_bytes(bytes: &[u8]) -> HashMap<String, Package> {
+    let mut decoder = GzDecoder::new(bytes);
     let mut text = String::new();
     decoder.read_to_string(&mut text).unwrap();
     parse_packages(&text)
+}
+
+pub fn fetch_cran_index() -> HashMap<String, Package> {
+    let cache_path = cache_dir().join("index/PACKAGES.gz");
+
+    // use cached index if it exists and is less than 24 hours old
+    if let Ok(metadata) = std::fs::metadata(&cache_path) {
+        if let Ok(modified) = metadata.modified() {
+            let age = modified.elapsed().unwrap_or(Duration::MAX);
+            if age < Duration::from_secs(86400) {
+                println!("using cached CRAN index");
+                let bytes = std::fs::read(&cache_path).unwrap();
+                return parse_from_bytes(&bytes);
+            }
+        }
+    }
+
+    println!("fetching CRAN package index...");
+    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
+    let bytes = response.bytes().unwrap();
+
+    // save to cache for next time
+    std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
+    std::fs::write(&cache_path, &bytes).unwrap();
+
+    parse_from_bytes(&bytes)
 }
 
 #[cfg(test)]
