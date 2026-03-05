@@ -126,8 +126,14 @@ fn main() {
                 std::process::exit(1);
             }
 
+            let t = Instant::now();
             let locked = read_lockfile();
             let packages = build_urls_from_pairs(&locked);
+            println!(
+                "Resolved {} packages in {}",
+                locked.len(),
+                fmt_duration(t.elapsed().as_millis())
+            );
 
             if verbose {
                 println!("  lib_dir:  {}", LIB_DIR);
