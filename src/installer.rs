@@ -1,4 +1,5 @@
 use flate2::read::GzDecoder;
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use crate::index::Package;
@@ -44,12 +45,29 @@ pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<
 pub fn download_and_install(urls: &[String], lib_dir: &str) {
     std::fs::create_dir_all(lib_dir).unwrap();
 
+    let pb = ProgressBar::new(urls.len() as u64);
+    pb.set_style(
+        ProgressStyle::with_template(
+            " {spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} {msg}"
+        )
+        .unwrap()
+        .progress_chars("█▓░"),
+    );
+
     urls.par_iter().for_each(|url| {
-        println!("downloading {}", url);
+        // extract package name from URL: "ggplot2_3.5.1.tgz" → "ggplot2"
+        let filename = url.split('/').last().unwrap_or(url);
+        let pkg_name = filename.split('_').next().unwrap_or(filename);
+        pb.set_message(format!("installing {}", pkg_name));
+
         let response = reqwest::blocking::get(url).unwrap();
         let bytes = response.bytes().unwrap();
         let decoder = GzDecoder::new(&bytes[..]);
         let mut archive = tar::Archive::new(decoder);
         archive.unpack(lib_dir).unwrap();
+
+        pb.inc(1);
     });
+
+    pb.finish_with_message("done");
 }
