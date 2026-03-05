@@ -1,0 +1,9 @@
+[project]
+name = "test_project"
+version = "0.1.0"
+r-version = ">=4.3"
+dependencies = [
+    "ggplot2",
+    "dplyr",
+    "tidymodels"
+]

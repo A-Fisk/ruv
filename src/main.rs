@@ -1,9 +1,12 @@
 use clap::{Parser, Subcommand};
 use flate2::read::GzDecoder;
-use std::io::Read;
+use serde::Deserialize;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::io::Read;
+
+// ── CLI ──────────────────────────────────────────────────────────────────────
 
 #[derive(Parser)]
 #[command(name = "arrrv", about = "A fast R package manager")]
@@ -19,23 +22,56 @@ enum Commands {
         /// Name of the package to install
         package: String,
     },
+    /// Sync project library from arrrv.toml
+    Sync,
+    /// Add a package to arrrv.toml and sync
+    Add {
+        /// Name of the package to add
+        package: String,
+    },
 }
 
+// ── PROJECT CONFIG ────────────────────────────────────────────────────────────
 
-// create custom data type
+#[derive(Deserialize)]
+struct ArrrConfig {
+    project: ProjectConfig,
+}
+
+#[derive(Deserialize)]
+struct ProjectConfig {
+    #[allow(dead_code)]
+    name: String,
+    #[allow(dead_code)]
+    version: String,
+    dependencies: Vec<String>,
+}
+
+fn read_config() -> ArrrConfig {
+    let text = std::fs::read_to_string("arrrv.toml")
+        .expect("could not find arrrv.toml — are you in the right directory?");
+    toml::from_str(&text).expect("failed to parse arrrv.toml")
+}
+
+// strips version specifier: "ggplot2>=3.4" → "ggplot2"
+fn parse_dep_name(dep: &str) -> String {
+    dep.chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '.' || *c == '-')
+        .collect()
+}
+
+// ── CRAN PACKAGE INDEX ────────────────────────────────────────────────────────
+
 struct Package {
     version: String,
     deps: Vec<String>,
 }
 
-// function to be used later
 fn parse_packages(text: &str) -> HashMap<String, Package> {
-
-    // create index we will use later
     let mut index = HashMap::new();
 
     for block in text.split("\n\n") {
-        // join continuation lines together
+        // join continuation lines back onto the previous line
         let joined = block
             .lines()
             .fold(String::new(), |mut acc, line| {
@@ -49,7 +85,6 @@ fn parse_packages(text: &str) -> HashMap<String, Package> {
                 acc
             });
 
-        // parse key: value pairs
         let mut name = None;
         let mut version = None;
         let mut deps: Vec<String> = Vec::new();
@@ -89,33 +124,55 @@ fn parse_packages(text: &str) -> HashMap<String, Package> {
     index
 }
 
+fn fetch_cran_index() -> HashMap<String, Package> {
+    println!("fetching CRAN package index...");
+    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
+    let bytes = response.bytes().unwrap();
+    let mut decoder = GzDecoder::new(&bytes[..]);
+    let mut text = String::new();
+    decoder.read_to_string(&mut text).unwrap();
+    parse_packages(&text)
+}
+
+// ── RESOLVER ──────────────────────────────────────────────────────────────────
+
 fn resolve(root: &str, index: &HashMap<String, Package>) -> Vec<String> {
     let mut visited: HashSet<String> = HashSet::new();
     let mut queue: VecDeque<String> = VecDeque::new();
 
     queue.push_back(root.to_string());
 
-    while let Some(name) = queue.pop_front() { 
-
-        //ignore if already found
-        if visited.contains(&name) { 
+    while let Some(name) = queue.pop_front() {
+        if visited.contains(&name) {
             continue;
         }
         visited.insert(name.clone());
-        
+
         if let Some(pkg) = index.get(&name) {
-            for dep in &pkg.deps { 
-                if !visited.contains(dep) { 
+            for dep in &pkg.deps {
+                if !visited.contains(dep) {
                     queue.push_back(dep.clone());
                 }
             }
         }
     }
 
-    // remove root package itself
     visited.remove(root);
     visited.into_iter().collect()
 }
+
+fn resolve_all(roots: &[String], index: &HashMap<String, Package>) -> Vec<String> {
+    let mut all: HashSet<String> = HashSet::new();
+    for root in roots {
+        all.insert(root.clone());
+        for dep in resolve(root, index) {
+            all.insert(dep);
+        }
+    }
+    all.into_iter().collect()
+}
+
+// ── INSTALLER ─────────────────────────────────────────────────────────────────
 
 fn get_arch() -> &'static str {
     match std::env::consts::ARCH {
@@ -133,7 +190,6 @@ fn get_r_version() -> String {
         .expect("Failed to run Rscript — is R installed?");
 
     let full = String::from_utf8(output.stdout).unwrap();
-    // full looks like "4.4.2" — we only want "4.4"
     full.split('.')
         .take(2)
         .collect::<Vec<_>>()
@@ -161,37 +217,66 @@ fn download_and_install(urls: &[String], lib_dir: &str) {
 
     for url in urls {
         println!("downloading {}", url);
-
         let response = reqwest::blocking::get(url).unwrap();
         let bytes = response.bytes().unwrap();
-
-        // decompress gzip
         let decoder = GzDecoder::new(&bytes[..]);
-
-        // untar into lib_dir
         let mut archive = tar::Archive::new(decoder);
         archive.unpack(lib_dir).unwrap();
     }
 }
 
+// ── LOCKFILE ──────────────────────────────────────────────────────────────────
+
+fn write_lockfile(packages: &[String], index: &HashMap<String, Package>) {
+    let mut out = String::from("# arrrv.lock — generated, do not edit\n\n");
+    let mut sorted = packages.to_vec();
+    sorted.sort();
+    for name in &sorted {
+        if let Some(pkg) = index.get(name) {
+            out.push_str("[[package]]\n");
+            out.push_str(&format!("name = \"{}\"\n", name));
+            out.push_str(&format!("version = \"{}\"\n\n", pkg.version));
+        }
+    }
+    std::fs::write("arrrv.lock", out).unwrap();
+    println!("wrote arrrv.lock");
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────────────
+
 fn main() {
     let cli = Cli::parse();
-    let Commands::Install { package } = cli.command;
 
-    // fetch and parse CRAN package index
-    println!("fetching CRAN package index...");
-    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
-    let bytes = response.bytes().unwrap();
-    let mut decoder = GzDecoder::new(&bytes[..]);
-    let mut text = String::new();
-    decoder.read_to_string(&mut text).unwrap();
-    let index = parse_packages(&text);
+    match cli.command {
+        Commands::Install { package } => {
+            let index = fetch_cran_index();
+            println!("resolving dependencies for {}...", package);
+            let deps = resolve(&package, &index);
+            println!("installing {} packages...", deps.len());
+            let urls = build_urls(&deps, &index);
+            download_and_install(&urls, "./arrrv_lib");
+            println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library({})\"", package);
+        }
 
-    // resolve and install
-    println!("resolving dependencies for {}...", package);
-    let deps = resolve(&package, &index);
-    println!("installing {} packages...", deps.len());
-    let urls = build_urls(&deps, &index);
-    download_and_install(&urls, "./arrrv_lib");
-    println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library({})\"", package)
+        Commands::Sync => {
+            let config = read_config();
+            let roots: Vec<String> = config.project.dependencies
+                .iter()
+                .map(|d| parse_dep_name(d))
+                .collect();
+            println!("resolving {} direct dependencies...", roots.len());
+            let index = fetch_cran_index();
+            let all = resolve_all(&roots, &index);
+            println!("installing {} packages total...", all.len());
+            let urls = build_urls(&all, &index);
+            download_and_install(&urls, "./arrrv_lib");
+            write_lockfile(&all, &index);
+            println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library(...)\"");
+        }
+
+        Commands::Add { package } => {
+            println!("add \"{}\" to your arrrv.toml dependencies, then run arrrv sync", package);
+            println!("  dependencies = [\"{}\"]", package);
+        }
+    }
 }
