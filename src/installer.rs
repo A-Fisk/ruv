@@ -19,18 +19,21 @@ pub fn get_arch() -> &'static str {
 pub fn get_r_version() -> &'static str {
     static R_VERSION: OnceLock<String> = OnceLock::new();
     R_VERSION.get_or_init(|| {
-        // R RHOME just prints the R home path — no interpreter startup
+        // R --version prints e.g. "R version 4.5.2 (2025-10-31) -- ..."
+        // This is fast — no interpreter session is started
         let output = std::process::Command::new("R")
-            .arg("RHOME")
+            .arg("--version")
             .output()
             .expect("Failed to run R — is R installed?");
 
-        let r_home = String::from_utf8(output.stdout).unwrap();
-        let version_file = std::path::Path::new(r_home.trim()).join("VERSION");
-        let full = std::fs::read_to_string(&version_file)
-            .expect("Could not read R VERSION file");
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let version_str = stdout
+            .lines()
+            .next()
+            .and_then(|line| line.split_whitespace().nth(2))
+            .expect("Could not parse R version from `R --version`");
 
-        full.trim().split('.')
+        version_str.split('.')
             .take(2)
             .collect::<Vec<_>>()
             .join(".")
