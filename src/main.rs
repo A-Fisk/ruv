@@ -100,6 +100,63 @@ fn resolve(root: &str, index: &HashMap<String, Package>) -> Vec<String> {
     visited.into_iter().collect()
 }
 
+fn get_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" => "big-sur-arm64",
+        "x86_64"  => "big-sur-x86_64",
+        other     => panic!("Unsupported architecture: {}", other),
+    }
+}
+
+fn get_r_version() -> String {
+    let output = std::process::Command::new("Rscript")
+        .arg("-e")
+        .arg("cat(R.Version()$major, R.Version()$minor, sep='.')")
+        .output()
+        .expect("Failed to run Rscript — is R installed?");
+
+    let full = String::from_utf8(output.stdout).unwrap();
+    // full looks like "4.4.2" — we only want "4.4"
+    full.split('.')
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<String> {
+    let arch = get_arch();
+    let r_version = get_r_version();
+
+    packages.iter()
+        .filter_map(|name| {
+            let pkg = index.get(name)?;
+            let url = format!(
+                "https://cloud.r-project.org/bin/macosx/{}/contrib/{}/{}_{}.tgz",
+                arch, r_version, name, pkg.version
+            );
+            Some(url)
+        })
+        .collect()
+}
+
+fn download_and_install(urls: &[String], lib_dir: &str) {
+    std::fs::create_dir_all(lib_dir).unwrap();
+
+    for url in urls {
+        println!("downloading {}", url);
+
+        let response = reqwest::blocking::get(url).unwrap();
+        let bytes = response.bytes().unwrap();
+
+        // decompress gzip
+        let decoder = GzDecoder::new(&bytes[..]);
+
+        // untar into lib_dir
+        let mut archive = tar::Archive::new(decoder);
+        archive.unpack(lib_dir).unwrap();
+    }
+}
+
 fn main() {
     // define url to get from
     let url = "https://cloud.r-project.org/src/contrib/PACKAGES.gz";
@@ -119,8 +176,7 @@ fn main() {
     let index = parse_packages(&text);
     
     let deps = resolve("ggplot2", &index);
-    println!("ggplot2 requires {} packages:", deps.len());
-    for dep in &deps {
-        println!("  {}", dep);
-    }
+    let urls = build_urls(&deps, &index);
+    download_and_install(&urls, "./arrrv_lib");
+    println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library(ggplot2)\"")
 }
