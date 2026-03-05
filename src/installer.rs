@@ -47,11 +47,22 @@ pub fn download_and_install(urls: &[String], lib_dir: &str) {
     std::fs::create_dir_all(lib_dir).unwrap();
 
     let mp = MultiProgress::new();
-    let style = ProgressStyle::with_template(
-        " {spinner:.green} {wide_msg:<30} [{bar:30.cyan/blue}] {bytes}/{total_bytes}"
+
+    let overall_style = ProgressStyle::with_template(
+        "  {msg:<32} [{bar:40.green/dim}] {pos}/{len}"
     )
     .unwrap()
-    .progress_chars("█▓░");
+    .progress_chars("━━╌");
+
+    let pkg_style = ProgressStyle::with_template(
+        "  {spinner:.green} {msg:<30} [{bar:40.green/dim}] {bytes:>8} / {total_bytes}"
+    )
+    .unwrap()
+    .progress_chars("━━╌");
+
+    let overall = mp.add(ProgressBar::new(urls.len() as u64));
+    overall.set_style(overall_style);
+    overall.set_message("Installing packages");
 
     urls.par_iter().for_each(|url| {
         // extract package name from URL: "ggplot2_3.5.1.tgz" → "ggplot2"
@@ -59,7 +70,7 @@ pub fn download_and_install(urls: &[String], lib_dir: &str) {
         let pkg_name = filename.split('_').next().unwrap_or(filename);
 
         let pb = mp.add(ProgressBar::new(0));
-        pb.set_style(style.clone());
+        pb.set_style(pkg_style.clone());
         pb.set_message(pkg_name.to_string());
 
         let response = reqwest::blocking::get(url).unwrap();
@@ -70,10 +81,14 @@ pub fn download_and_install(urls: &[String], lib_dir: &str) {
         let mut src = pb.wrap_read(response);
         let mut bytes = Vec::new();
         src.read_to_end(&mut bytes).unwrap();
-        pb.finish();
+        pb.finish_and_clear();
 
         let decoder = GzDecoder::new(bytes.as_slice());
         let mut archive = tar::Archive::new(decoder);
         archive.unpack(lib_dir).unwrap();
+
+        overall.inc(1);
     });
+
+    overall.finish_with_message("done");
 }
