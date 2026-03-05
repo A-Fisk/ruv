@@ -1,6 +1,9 @@
 use flate2::read::GzDecoder;
 use std::io::Read;
 use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::collections::HashSet;
+
 
 // create custom data type
 struct Package {
@@ -47,7 +50,11 @@ fn parse_packages(text: &str) -> HashMap<String, Package> {
                                 .map(|(n, _)| n)
                                 .unwrap_or(dep.trim())
                                 .to_string();
-                            if dep_name != "R" && !dep_name.is_empty() {
+                            let base_packages = [
+                                "R", "base", "utils", "stats", "graphics", "grDevices",
+                                "methods", "datasets", "tools", "grid", "compiler",
+                            ];
+                            if !base_packages.contains(&dep_name.as_str()) && !dep_name.is_empty() {
                                 deps.push(dep_name);
                             }
                         }
@@ -63,6 +70,34 @@ fn parse_packages(text: &str) -> HashMap<String, Package> {
     }
 
     index
+}
+
+fn resolve(root: &str, index: &HashMap<String, Package>) -> Vec<String> {
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+
+    queue.push_back(root.to_string());
+
+    while let Some(name) = queue.pop_front() { 
+
+        //ignore if already found
+        if visited.contains(&name) { 
+            continue;
+        }
+        visited.insert(name.clone());
+        
+        if let Some(pkg) = index.get(&name) {
+            for dep in &pkg.deps { 
+                if !visited.contains(dep) { 
+                    queue.push_back(dep.clone());
+                }
+            }
+        }
+    }
+
+    // remove root package itself
+    visited.remove(root);
+    visited.into_iter().collect()
 }
 
 fn main() {
@@ -82,9 +117,10 @@ fn main() {
 
     // print the first few packages
     let index = parse_packages(&text);
-
-    let pkg = index.get("ggplot2").unwrap();
-    println!("ggplot2 v{}", pkg.version);
-    println!("deps: {:?}", pkg.deps);
-    println!("total packages: {}", index.len());
+    
+    let deps = resolve("ggplot2", &index);
+    println!("ggplot2 requires {} packages:", deps.len());
+    for dep in &deps {
+        println!("  {}", dep);
+    }
 }
