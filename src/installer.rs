@@ -46,14 +46,66 @@ pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<
         .collect()
 }
 
-pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str) {
-    let lib_path = Path::new(lib_dir);
-
-    // wipe the project library so we get a clean sync rather than accumulating stale files
-    if lib_path.exists() {
-        std::fs::remove_dir_all(lib_path).unwrap();
+/// Reads installed packages from a library dir by parsing each DESCRIPTION file.
+/// Returns a map of package name → installed version.
+fn read_installed(lib_dir: &Path) -> HashMap<String, String> {
+    let mut installed = HashMap::new();
+    let Ok(entries) = std::fs::read_dir(lib_dir) else {
+        return installed;
+    };
+    for entry in entries.flatten() {
+        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(entry.path().join("DESCRIPTION")) else {
+            continue;
+        };
+        let mut name = None;
+        let mut version = None;
+        for line in text.lines() {
+            if let Some(v) = line.strip_prefix("Package: ") {
+                name = Some(v.trim().to_string());
+            } else if let Some(v) = line.strip_prefix("Version: ") {
+                version = Some(v.trim().to_string());
+            }
+            if name.is_some() && version.is_some() {
+                break;
+            }
+        }
+        if let (Some(n), Some(v)) = (name, version) {
+            installed.insert(n, v);
+        }
     }
+    installed
+}
+
+/// Installs packages into lib_dir. Returns (audited, installed) counts:
+/// - audited: packages already present at the correct version (skipped)
+/// - installed: packages newly downloaded or hard-linked from cache
+pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str) -> (usize, usize) {
+    let lib_path = Path::new(lib_dir);
     std::fs::create_dir_all(lib_path).unwrap();
+
+    // diff current library state against the requested package list
+    let installed = read_installed(lib_path);
+    let to_install: Vec<_> = packages.iter()
+        .filter(|(name, version, _)| installed.get(name).map(|v| v != version).unwrap_or(true))
+        .collect();
+    let to_remove: Vec<_> = installed.keys()
+        .filter(|name| !packages.iter().any(|(n, _, _)| n == *name))
+        .cloned()
+        .collect();
+
+    let audited = packages.len() - to_install.len();
+
+    // remove packages that are no longer needed
+    for name in &to_remove {
+        let _ = std::fs::remove_dir_all(lib_path.join(name));
+    }
+
+    if to_install.is_empty() {
+        return (audited, 0);
+    }
 
     let mp = MultiProgress::new();
 
@@ -69,11 +121,11 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
     .unwrap()
     .progress_chars("━━╌");
 
-    let overall = mp.add(ProgressBar::new(packages.len() as u64));
+    let overall = mp.add(ProgressBar::new(to_install.len() as u64));
     overall.set_style(overall_style);
     overall.set_message("Installing packages");
 
-    packages.par_iter().for_each(|(name, version, url)| {
+    to_install.par_iter().for_each(|(name, version, url)| {
         // cache hit — hard-link directly into project library, no download needed
         if is_cached(name, version) {
             hard_link_into_library(name, version, lib_path);
@@ -109,5 +161,7 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
         overall.inc(1);
     });
 
-    overall.finish_with_message("done");
+    overall.finish_and_clear();
+
+    (audited, to_install.len())
 }

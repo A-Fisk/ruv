@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::time::Instant;
 
 mod cache;
 mod config;
@@ -43,18 +44,33 @@ enum Commands {
     },
 }
 
+fn fmt_duration(ms: u128) -> String {
+    if ms < 1000 {
+        format!("{}ms", ms)
+    } else {
+        format!("{:.2}s", ms as f64 / 1000.0)
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Install { package } => {
+            let t = Instant::now();
             let index = fetch_cran_index();
-            println!("resolving dependencies for {}...", package);
             let deps = resolve(&package, &index);
-            println!("installing {} packages...", deps.len());
+            println!("Resolved {} packages in {}", deps.len(), fmt_duration(t.elapsed().as_millis()));
+
+            let t = Instant::now();
             let packages = build_urls(&deps, &index);
-            download_and_install(&packages, LIB_DIR);
-            println!("done! run with: arrrv run -e \"library({})\"", package);
+            let (audited, installed) = download_and_install(&packages, LIB_DIR);
+            if audited > 0 {
+                println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
+            }
+            if installed > 0 {
+                println!("Installed {} packages in {}", installed, fmt_duration(t.elapsed().as_millis()));
+            }
         }
 
         Commands::Sync => {
@@ -63,14 +79,22 @@ fn main() {
                 .iter()
                 .map(|d| parse_dep_name(d))
                 .collect();
-            println!("resolving {} direct dependencies...", roots.len());
+
+            let t = Instant::now();
             let index = fetch_cran_index();
             let all = resolve_all(&roots, &index);
-            println!("installing {} packages total...", all.len());
+            println!("Resolved {} packages in {}", all.len(), fmt_duration(t.elapsed().as_millis()));
+
+            let t = Instant::now();
             let packages = build_urls(&all, &index);
-            download_and_install(&packages, LIB_DIR);
+            let (audited, installed) = download_and_install(&packages, LIB_DIR);
+            if audited > 0 {
+                println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
+            }
+            if installed > 0 {
+                println!("Installed {} packages in {}", installed, fmt_duration(t.elapsed().as_millis()));
+            }
             write_lockfile(&all, &index);
-            println!("done! use arrrv run to execute scripts with the project library");
         }
 
         Commands::Add { package } => {
