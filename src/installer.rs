@@ -48,6 +48,11 @@ pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<
 
 pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str) {
     let lib_path = Path::new(lib_dir);
+
+    // wipe the project library so we get a clean sync rather than accumulating stale files
+    if lib_path.exists() {
+        std::fs::remove_dir_all(lib_path).unwrap();
+    }
     std::fs::create_dir_all(lib_path).unwrap();
 
     let mp = MultiProgress::new();
