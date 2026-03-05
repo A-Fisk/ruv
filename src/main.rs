@@ -1,8 +1,25 @@
+use clap::{Parser, Subcommand};
 use flate2::read::GzDecoder;
 use std::io::Read;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::collections::HashSet;
+
+#[derive(Parser)]
+#[command(name = "arrrv", about = "A fast R package manager")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Install an R package and its dependencies
+    Install {
+        /// Name of the package to install
+        package: String,
+    },
+}
 
 
 // create custom data type
@@ -158,25 +175,23 @@ fn download_and_install(urls: &[String], lib_dir: &str) {
 }
 
 fn main() {
-    // define url to get from
-    let url = "https://cloud.r-project.org/src/contrib/PACKAGES.gz";
+    let cli = Cli::parse();
+    let Commands::Install { package } = cli.command;
 
-    // connect to url
-    let response = reqwest::blocking::get(url).unwrap();
-
-    // get the information
+    // fetch and parse CRAN package index
+    println!("fetching CRAN package index...");
+    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
     let bytes = response.bytes().unwrap();
-
-    // decompress to a string
     let mut decoder = GzDecoder::new(&bytes[..]);
     let mut text = String::new();
     decoder.read_to_string(&mut text).unwrap();
-
-    // print the first few packages
     let index = parse_packages(&text);
-    
-    let deps = resolve("ggplot2", &index);
+
+    // resolve and install
+    println!("resolving dependencies for {}...", package);
+    let deps = resolve(&package, &index);
+    println!("installing {} packages...", deps.len());
     let urls = build_urls(&deps, &index);
     download_and_install(&urls, "./arrrv_lib");
-    println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library(ggplot2)\"")
+    println!("done! run with: R_LIBS=./arrrv_lib Rscript -e \"library({})\"", package)
 }
