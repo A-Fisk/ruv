@@ -19,6 +19,17 @@ pub fn get_arch() -> &'static str {
 pub fn get_r_version() -> &'static str {
     static R_VERSION: OnceLock<String> = OnceLock::new();
     R_VERSION.get_or_init(|| {
+        let cache_path = cache_dir().join("r-version");
+
+        // read from disk cache if it exists — avoids shelling out to Rscript
+        if let Ok(v) = std::fs::read_to_string(&cache_path) {
+            let v = v.trim().to_string();
+            if !v.is_empty() {
+                return v;
+            }
+        }
+
+        // shell out once and cache the result
         let output = std::process::Command::new("Rscript")
             .arg("-e")
             .arg("cat(R.Version()$major, R.Version()$minor, sep='.')")
@@ -26,10 +37,15 @@ pub fn get_r_version() -> &'static str {
             .expect("Failed to run Rscript — is R installed?");
 
         let full = String::from_utf8(output.stdout).unwrap();
-        full.split('.')
+        let version = full.split('.')
             .take(2)
             .collect::<Vec<_>>()
-            .join(".")
+            .join(".");
+
+        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
+        std::fs::write(&cache_path, &version).unwrap();
+
+        version
     })
 }
 
