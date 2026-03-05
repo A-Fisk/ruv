@@ -19,6 +19,7 @@ jobs:
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
+          use-public-rspm: true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -30,9 +31,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+            /usr/local/lib/R
+          key: ${{ runner.os }}-cargo-r-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-r-
 
       - name: Run tests
         run: cargo test
