@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
+use std::sync::OnceLock;
 use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
 use crate::index::Package;
 
@@ -15,18 +16,21 @@ pub fn get_arch() -> &'static str {
     }
 }
 
-pub fn get_r_version() -> String {
-    let output = std::process::Command::new("Rscript")
-        .arg("-e")
-        .arg("cat(R.Version()$major, R.Version()$minor, sep='.')")
-        .output()
-        .expect("Failed to run Rscript — is R installed?");
+pub fn get_r_version() -> &'static str {
+    static R_VERSION: OnceLock<String> = OnceLock::new();
+    R_VERSION.get_or_init(|| {
+        let output = std::process::Command::new("Rscript")
+            .arg("-e")
+            .arg("cat(R.Version()$major, R.Version()$minor, sep='.')")
+            .output()
+            .expect("Failed to run Rscript — is R installed?");
 
-    let full = String::from_utf8(output.stdout).unwrap();
-    full.split('.')
-        .take(2)
-        .collect::<Vec<_>>()
-        .join(".")
+        let full = String::from_utf8(output.stdout).unwrap();
+        full.split('.')
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(".")
+    })
 }
 
 /// Returns (name, version, url) tuples for each package
