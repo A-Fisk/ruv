@@ -31,6 +31,24 @@ pub fn parse_dep_name(dep: &str) -> String {
 mod tests {
     use super::*;
 
+    fn parse_config(text: &str) -> ArrrConfig {
+        toml::from_str(text).expect("failed to parse arrrv.toml")
+    }
+
+    #[test]
+    fn test_read_config_parses_dependencies() {
+        let toml = "[project]\nname = \"test\"\nversion = \"0.1.0\"\ndependencies = [\"ggplot2\", \"dplyr\"]";
+        let config = parse_config(toml);
+        assert_eq!(config.project.dependencies, vec!["ggplot2", "dplyr"]);
+    }
+
+    #[test]
+    fn test_read_config_empty_dependencies() {
+        let toml = "[project]\nname = \"test\"\nversion = \"0.1.0\"\ndependencies = []";
+        let config = parse_config(toml);
+        assert!(config.project.dependencies.is_empty());
+    }
+
     #[test]
     fn test_parse_dep_name_with_gte() {
         assert_eq!(parse_dep_name("ggplot2>=3.4"), "ggplot2");

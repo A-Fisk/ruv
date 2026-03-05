@@ -19,6 +19,9 @@ const LIB_DIR: &str = ".arrrv/library";
 #[derive(Parser)]
 #[command(name = "arrrv", about = "A fast R package manager")]
 struct Cli {
+    /// Print extra debug information
+    #[arg(long, short, global = true)]
+    verbose: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -54,6 +57,7 @@ fn fmt_duration(ms: u128) -> String {
 
 fn main() {
     let cli = Cli::parse();
+    let verbose = cli.verbose;
 
     match cli.command {
         Commands::Install { package } => {
@@ -64,7 +68,7 @@ fn main() {
             println!("Resolved {} packages in {}", deps.len(), fmt_duration(t.elapsed().as_millis()));
 
             let t = Instant::now();
-            let (audited, installed) = download_and_install(&packages, LIB_DIR);
+            let (audited, installed) = download_and_install(&packages, LIB_DIR, verbose);
             if audited > 0 {
                 println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
             }
@@ -86,8 +90,13 @@ fn main() {
             let packages = build_urls(&all, &index);
             println!("Resolved {} packages in {}", all.len(), fmt_duration(t.elapsed().as_millis()));
 
+            if verbose {
+                println!("  lib_dir:  {}", LIB_DIR);
+                println!("  packages: {}", packages.len());
+            }
+
             let t = Instant::now();
-            let (audited, installed) = download_and_install(&packages, LIB_DIR);
+            let (audited, installed) = download_and_install(&packages, LIB_DIR, verbose);
             if audited > 0 {
                 println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
             }

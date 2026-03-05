@@ -93,7 +93,7 @@ fn read_installed(lib_dir: &Path) -> HashMap<String, String> {
 /// Installs packages into lib_dir. Returns (audited, installed) counts:
 /// - audited: packages already present at the correct version (skipped)
 /// - installed: packages newly downloaded or hard-linked from cache
-pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str) -> (usize, usize) {
+pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str, verbose: bool) -> (usize, usize) {
     let lib_path = Path::new(lib_dir);
     std::fs::create_dir_all(lib_path).unwrap();
 
@@ -109,8 +109,15 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
 
     let audited = packages.len() - to_install.len();
 
+    if verbose {
+        println!("  already installed: {}", audited);
+        println!("  to install:        {}", to_install.len());
+        println!("  to remove:         {}", to_remove.len());
+    }
+
     // remove packages that are no longer needed
     for name in &to_remove {
+        if verbose { println!("  removing {}", name); }
         let _ = std::fs::remove_dir_all(lib_path.join(name));
     }
 
@@ -139,10 +146,12 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
     to_install.par_iter().for_each(|(name, version, url)| {
         // cache hit — hard-link directly into project library, no download needed
         if is_cached(name, version) {
+            if verbose { println!("  {} {} (from cache)", name, version); }
             hard_link_into_library(name, version, lib_path);
             overall.inc(1);
             return;
         }
+        if verbose { println!("  {} {} (downloading {})", name, version, url); }
 
         let pb = mp.add(ProgressBar::new(0));
         pb.set_style(pkg_style.clone());
@@ -175,4 +184,44 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
     overall.finish_and_clear();
 
     (audited, to_install.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::index::Package;
+
+    fn make_index(entries: &[(&str, &str)]) -> HashMap<String, Package> {
+        entries.iter().map(|(name, version)| {
+            (name.to_string(), Package { version: version.to_string(), deps: vec![] })
+        }).collect()
+    }
+
+    #[test]
+    fn test_build_urls_format() {
+        let index = make_index(&[("ggplot2", "3.5.1")]);
+        let urls = build_urls(&["ggplot2".to_string()], &index);
+        assert_eq!(urls.len(), 1);
+        let (name, version, url) = &urls[0];
+        assert_eq!(name, "ggplot2");
+        assert_eq!(version, "3.5.1");
+        assert!(url.contains("ggplot2_3.5.1.tgz"));
+        assert!(url.starts_with("https://cloud.r-project.org/bin/macosx/"));
+        assert!(url.contains("/contrib/"));
+    }
+
+    #[test]
+    fn test_build_urls_drops_missing_packages() {
+        let index = make_index(&[("ggplot2", "3.5.1")]);
+        let urls = build_urls(&["ggplot2".to_string(), "not-in-index".to_string()], &index);
+        assert_eq!(urls.len(), 1);
+        assert_eq!(urls[0].0, "ggplot2");
+    }
+
+    #[test]
+    fn test_build_urls_empty_input() {
+        let index = make_index(&[("ggplot2", "3.5.1")]);
+        let urls = build_urls(&[], &index);
+        assert!(urls.is_empty());
+    }
 }
