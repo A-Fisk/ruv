@@ -1,9 +1,9 @@
+use crate::cache::cache_dir;
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Read;
 use std::time::Duration;
-use crate::cache::cache_dir;
 
 #[derive(Serialize, Deserialize)]
 pub struct Package {
@@ -16,18 +16,18 @@ pub fn parse_packages(text: &str) -> HashMap<String, Package> {
 
     for block in text.split("\n\n") {
         // join continuation lines back onto the previous line
-        let joined = block
-            .lines()
-            .fold(String::new(), |mut acc, line| {
-                if line.starts_with(' ') {
-                    acc.push(' ');
-                    acc.push_str(line.trim());
-                } else {
-                    if !acc.is_empty() { acc.push('\n'); }
-                    acc.push_str(line)
+        let joined = block.lines().fold(String::new(), |mut acc, line| {
+            if line.starts_with(' ') {
+                acc.push(' ');
+                acc.push_str(line.trim());
+            } else {
+                if !acc.is_empty() {
+                    acc.push('\n');
                 }
-                acc
-            });
+                acc.push_str(line)
+            }
+            acc
+        });
 
         let mut name = None;
         let mut version = None;
@@ -47,8 +47,17 @@ pub fn parse_packages(text: &str) -> HashMap<String, Package> {
                                 .unwrap_or(dep.trim())
                                 .to_string();
                             let base_packages = [
-                                "R", "base", "utils", "stats", "graphics", "grDevices",
-                                "methods", "datasets", "tools", "grid", "compiler",
+                                "R",
+                                "base",
+                                "utils",
+                                "stats",
+                                "graphics",
+                                "grDevices",
+                                "methods",
+                                "datasets",
+                                "tools",
+                                "grid",
+                                "compiler",
                             ];
                             if !base_packages.contains(&dep_name.as_str()) && !dep_name.is_empty() {
                                 deps.push(dep_name);
@@ -77,7 +86,7 @@ fn is_fresh(path: &std::path::Path) -> bool {
 
 pub fn fetch_cran_index() -> HashMap<String, Package> {
     let bin_path = cache_dir().join("index/packages.bin");
-    let gz_path  = cache_dir().join("index/PACKAGES.gz");
+    let gz_path = cache_dir().join("index/PACKAGES.gz");
     // fast path: deserialise pre-parsed binary cache
     if is_fresh(&bin_path) {
         let bytes = std::fs::read(&bin_path).unwrap();
@@ -91,7 +100,8 @@ pub fn fetch_cran_index() -> HashMap<String, Package> {
         std::fs::read(&gz_path).unwrap()
     } else {
         println!("fetching CRAN package index...");
-        let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
+        let response =
+            reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
         let bytes = response.bytes().unwrap().to_vec();
         std::fs::create_dir_all(gz_path.parent().unwrap()).unwrap();
         std::fs::write(&gz_path, &bytes).unwrap();

@@ -1,0 +1,9 @@
+pkg_deps                List all dependencies
+tag_show                Facilities for loading and updating other
+                        packages
+tidymodels_conflicts    Conflicts between the tidymodels and other
+                        packages
+tidymodels_packages     List all packages in the tidymodels
+tidymodels_prefer       Resolve conflicts between tidymodels packages
+                        and others
+tidymodels_update       Update tidymodels packages

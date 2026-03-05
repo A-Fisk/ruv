@@ -1,3 +1,5 @@
+use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
+use crate::index::Package;
 use flate2::read::GzDecoder;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -5,14 +7,12 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
 use std::sync::OnceLock;
-use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
-use crate::index::Package;
 
 pub fn get_arch() -> &'static str {
     match std::env::consts::ARCH {
         "aarch64" => "big-sur-arm64",
-        "x86_64"  => "big-sur-x86_64",
-        other     => panic!("Unsupported architecture: {}", other),
+        "x86_64" => "big-sur-x86_64",
+        other => panic!("Unsupported architecture: {}", other),
     }
 }
 
@@ -33,19 +33,20 @@ pub fn get_r_version() -> &'static str {
             .and_then(|line| line.split_whitespace().nth(2))
             .expect("Could not parse R version from `R --version`");
 
-        version_str.split('.')
-            .take(2)
-            .collect::<Vec<_>>()
-            .join(".")
+        version_str.split('.').take(2).collect::<Vec<_>>().join(".")
     })
 }
 
 /// Returns (name, version, url) tuples for each package
-pub fn build_urls(packages: &[String], index: &HashMap<String, Package>) -> Vec<(String, String, String)> {
+pub fn build_urls(
+    packages: &[String],
+    index: &HashMap<String, Package>,
+) -> Vec<(String, String, String)> {
     let arch = get_arch();
     let r_version = get_r_version();
 
-    packages.iter()
+    packages
+        .iter()
         .filter_map(|name| {
             let pkg = index.get(name)?;
             let url = format!(
@@ -93,16 +94,22 @@ fn read_installed(lib_dir: &Path) -> HashMap<String, String> {
 /// Installs packages into lib_dir. Returns (audited, installed) counts:
 /// - audited: packages already present at the correct version (skipped)
 /// - installed: packages newly downloaded or hard-linked from cache
-pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str, verbose: bool) -> (usize, usize) {
+pub fn download_and_install(
+    packages: &[(String, String, String)],
+    lib_dir: &str,
+    verbose: bool,
+) -> (usize, usize) {
     let lib_path = Path::new(lib_dir);
     std::fs::create_dir_all(lib_path).unwrap();
 
     // diff current library state against the requested package list
     let installed = read_installed(lib_path);
-    let to_install: Vec<_> = packages.iter()
+    let to_install: Vec<_> = packages
+        .iter()
         .filter(|(name, version, _)| installed.get(name).map(|v| v != version).unwrap_or(true))
         .collect();
-    let to_remove: Vec<_> = installed.keys()
+    let to_remove: Vec<_> = installed
+        .keys()
         .filter(|name| !packages.iter().any(|(n, _, _)| n == *name))
         .cloned()
         .collect();
@@ -117,7 +124,9 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
 
     // remove packages that are no longer needed
     for name in &to_remove {
-        if verbose { println!("  removing {}", name); }
+        if verbose {
+            println!("  removing {}", name);
+        }
         let _ = std::fs::remove_dir_all(lib_path.join(name));
     }
 
@@ -127,14 +136,13 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
 
     let mp = MultiProgress::new();
 
-    let overall_style = ProgressStyle::with_template(
-        "  {msg:<32} [{bar:40.green/dim}] {pos}/{len}"
-    )
-    .unwrap()
-    .progress_chars("━━╌");
+    let overall_style =
+        ProgressStyle::with_template("  {msg:<32} [{bar:40.green/dim}] {pos}/{len}")
+            .unwrap()
+            .progress_chars("━━╌");
 
     let pkg_style = ProgressStyle::with_template(
-        "  {spinner:.green} {msg:<30} [{bar:40.green/dim}] {bytes:>8} / {total_bytes}"
+        "  {spinner:.green} {msg:<30} [{bar:40.green/dim}] {bytes:>8} / {total_bytes}",
     )
     .unwrap()
     .progress_chars("━━╌");
@@ -146,12 +154,16 @@ pub fn download_and_install(packages: &[(String, String, String)], lib_dir: &str
     to_install.par_iter().for_each(|(name, version, url)| {
         // cache hit — hard-link directly into project library, no download needed
         if is_cached(name, version) {
-            if verbose { println!("  {} {} (from cache)", name, version); }
+            if verbose {
+                println!("  {} {} (from cache)", name, version);
+            }
             hard_link_into_library(name, version, lib_path);
             overall.inc(1);
             return;
         }
-        if verbose { println!("  {} {} (downloading {})", name, version, url); }
+        if verbose {
+            println!("  {} {} (downloading {})", name, version, url);
+        }
 
         let pb = mp.add(ProgressBar::new(0));
         pb.set_style(pkg_style.clone());
@@ -192,9 +204,18 @@ mod tests {
     use crate::index::Package;
 
     fn make_index(entries: &[(&str, &str)]) -> HashMap<String, Package> {
-        entries.iter().map(|(name, version)| {
-            (name.to_string(), Package { version: version.to_string(), deps: vec![] })
-        }).collect()
+        entries
+            .iter()
+            .map(|(name, version)| {
+                (
+                    name.to_string(),
+                    Package {
+                        version: version.to_string(),
+                        deps: vec![],
+                    },
+                )
+            })
+            .collect()
     }
 
     #[test]

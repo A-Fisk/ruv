@@ -1,0 +1,48 @@
+DiceDesign-package      Designs of Computer Experiments
+NOLHDRdesigns           List of De Rainville's Nearly Orthogonal Latin
+                        Hypercubes designs
+NOLHdesigns             List of Cioppa's Nearly Orthogonal Latin
+                        Hypercubes designs
+OA131                   A 3D orthogonal array of strength 2
+OA131_scrambled         A scrambled 3D orthogonal array of strength 2
+coverage                Coverage
+discrepESE_LHS          Enhanced Stochastic Evolutionnary (ESE)
+                        algorithm for Latin Hypercube Sample (LHS)
+                        optimization via L2-discrepancy criteria
+discrepSA_LHS           Simulated annealing (SA) routine for Latin
+                        Hypercube Sample (LHS) optimization via
+                        L2-discrepancy criteria
+discrepancyCriteria     Discrepancy measure
+dmaxDesign              Maximum Entropy Designs
+factDesign              Full Factorial Designs
+faureprimeDesign        A special case of the low discrepancy Faure
+                        sequence
+lhsDesign               Latin Hypercube Designs
+maximinESE_LHS          Enhanced Stochastic Evolutionnary (ESE)
+                        algorithm for Latin Hypercube Sample (LHS)
+                        optimization via phiP criteria
+maximinSA_LHS           Simulated annealing (SA) routine for Latin
+                        Hypercube Sample (LHS) optimization via phiP
+                        criteria
+meshRatio               MeshRatio measure
+mindist                 Mindist measure
+mstCriteria             Deriving the MST criteria
+nolhDesign              Cioppa's Nearly Orthogonal Latin Hypercube
+                        Designs
+nolhdrDesign            De Rainville's Nearly Orthogonal Latin
+                        Hypercube Designs
+olhDesign               Nguyen's Orthogonal Latin Hypercube Designs
+phiP                    phiP criterion
+rss2d                   2D graphical tool for defect detection of
+                        Space-Filling Designs.
+rss3d                   3D graphical tool for defect detection of
+                        Space-Filling Designs.
+runif.faure             Low discrepancy sequence : Faure
+scaleDesign             Scale a Design
+straussDesign           Designs based on Strauss process
+unif.test.quantile      Quantile of some uniformity tests
+unif.test.statistic     Statistic of some uniformity tests
+unscaleDesign           Unscale a Design
+wspDesign               WSP algorithm
+xDRDN                   Extract a Design and Give it a Range and
+                        Dimnames

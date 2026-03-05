@@ -1,6 +1,6 @@
+use crate::index::Package;
 use std::collections::HashMap;
 use std::path::Path;
-use crate::index::Package;
 
 pub fn write_lockfile(packages: &[String], index: &HashMap<String, Package>) {
     write_lockfile_to(Path::new("arrrv.lock"), packages, index);
@@ -27,9 +27,18 @@ mod tests {
     use crate::index::Package;
 
     fn make_index(entries: &[(&str, &str)]) -> HashMap<String, Package> {
-        entries.iter().map(|(name, version)| {
-            (name.to_string(), Package { version: version.to_string(), deps: vec![] })
-        }).collect()
+        entries
+            .iter()
+            .map(|(name, version)| {
+                (
+                    name.to_string(),
+                    Package {
+                        version: version.to_string(),
+                        deps: vec![],
+                    },
+                )
+            })
+            .collect()
     }
 
     #[test]

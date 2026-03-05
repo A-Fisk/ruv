@@ -1,0 +1,4 @@
+get_design              Retrieve a Space-Filling Design
+sfd_available           Is a Space-Filling Design Available?
+sfd_lib                 Space-Filling Designs
+update_values           Update the Values of a Design

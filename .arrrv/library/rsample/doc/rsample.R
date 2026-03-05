@@ -1,0 +1,23 @@
+## ---------------------------------------------------------------------------------------
+knitr::opts_chunk$set(
+  message = FALSE,
+  digits = 3,
+  collapse = TRUE,
+  comment = "#>"
+  )
+options(digits = 3)
+
+## ---------------------------------------------------------------------------------------
+library(rsample)
+set.seed(8584)
+bt_resamples <- bootstraps(mtcars, times = 3)
+bt_resamples
+
+## ---------------------------------------------------------------------------------------
+first_resample <- bt_resamples$splits[[1]]
+first_resample
+
+## ---------------------------------------------------------------------------------------
+head(as.data.frame(first_resample))
+as.data.frame(first_resample, data = "assessment")
+

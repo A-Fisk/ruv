@@ -1,0 +1,10 @@
+GP_deviance             Computes the Deviance of a GP model
+GP_fit                  Gaussian Process Model fitting
+GPfit-package           Gaussian Process Modeling
+corr_matrix             Power Exponential or Matern Correlation Matrix
+plot                    Plotting GP model fits
+predict                 Model Predictions from GPfit
+print.GP                GP model fit Summary
+scale_norm              Scale variable into normal range 0, 1
+sig_invb                Internal tools
+summary.GP              Summary of GP model fit

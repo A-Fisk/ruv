@@ -1,0 +1,73 @@
+accuracy                Accuracy
+average_precision       Area under the precision recall curve
+bal_accuracy            Balanced accuracy
+brier_class             Brier score for classification models
+brier_survival          Time-Dependent Brier score for right censored
+                        data
+brier_survival_integrated
+                        Integrated Brier score for right censored data
+ccc                     Concordance correlation coefficient
+check_metric            Developer function for checking inputs in new
+                        metrics
+classification_cost     Costs function for poor classification
+concordance_survival    Concordance index for right-censored data
+conf_mat                Confusion Matrix for Categorical Data
+demographic_parity      Demographic parity
+detection_prevalence    Detection prevalence
+developer-helpers       Developer helpers
+equal_opportunity       Equal opportunity
+equalized_odds          Equalized odds
+f_meas                  F Measure
+gain_capture            Gain capture
+gain_curve              Gain curve
+hpc_cv                  Multiclass Probability Predictions
+huber_loss              Huber loss
+huber_loss_pseudo       Psuedo-Huber Loss
+iic                     Index of ideality of correlation
+j_index                 J-index
+kap                     Kappa
+lift_curve              Lift curve
+lung_surv               Survival Analysis Results
+mae                     Mean absolute error
+mape                    Mean absolute percent error
+mase                    Mean absolute scaled error
+mcc                     Matthews correlation coefficient
+metric-summarizers      Developer function for summarizing new metrics
+metric_set              Combine metric functions
+metric_tweak            Tweak a metric function
+metrics                 General Function to Estimate Performance
+mn_log_loss             Mean log loss for multinomial data
+mpe                     Mean percentage error
+msd                     Mean signed deviation
+new-metric              Construct a new metric function
+new_groupwise_metric    Create groupwise metrics
+npv                     Negative predictive value
+pathology               Liver Pathology Data
+poisson_log_loss        Mean log loss for Poisson data
+ppv                     Positive predictive value
+pr_auc                  Area under the precision recall curve
+pr_curve                Precision recall curve
+precision               Precision
+recall                  Recall
+rmse                    Root mean squared error
+roc_auc                 Area under the receiver operator curve
+roc_auc_survival        Time-Dependent ROC AUC for Censored Data
+roc_aunp                Area under the ROC curve of each class against
+                        the rest, using the a priori class distribution
+roc_aunu                Area under the ROC curve of each class against
+                        the rest, using the uniform class distribution
+roc_curve               Receiver operator curve
+roc_curve_survival      Time-Dependent ROC surve for Censored Data
+rpd                     Ratio of performance to deviation
+rpiq                    Ratio of performance to inter-quartile
+rsq                     R squared
+rsq_trad                R squared - traditional
+sens                    Sensitivity
+smape                   Symmetric mean absolute percentage error
+solubility_test         Solubility Predictions from MARS Model
+spec                    Specificity
+summary.conf_mat        Summary Statistics for Confusion Matrices
+two_class_example       Two Class Predictions
+yardstick_remove_missing
+                        Developer function for handling missing values
+                        in new metrics

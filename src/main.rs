@@ -65,21 +65,35 @@ fn main() {
             let index = fetch_cran_index();
             let deps = resolve(&package, &index);
             let packages = build_urls(&deps, &index);
-            println!("Resolved {} packages in {}", deps.len(), fmt_duration(t.elapsed().as_millis()));
+            println!(
+                "Resolved {} packages in {}",
+                deps.len(),
+                fmt_duration(t.elapsed().as_millis())
+            );
 
             let t = Instant::now();
             let (audited, installed) = download_and_install(&packages, LIB_DIR, verbose);
             if audited > 0 {
-                println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
+                println!(
+                    "Audited {} packages in {}",
+                    audited,
+                    fmt_duration(t.elapsed().as_millis())
+                );
             }
             if installed > 0 {
-                println!("Installed {} packages in {}", installed, fmt_duration(t.elapsed().as_millis()));
+                println!(
+                    "Installed {} packages in {}",
+                    installed,
+                    fmt_duration(t.elapsed().as_millis())
+                );
             }
         }
 
         Commands::Sync => {
             let config = read_config();
-            let roots: Vec<String> = config.project.dependencies
+            let roots: Vec<String> = config
+                .project
+                .dependencies
                 .iter()
                 .map(|d| parse_dep_name(d))
                 .collect();
@@ -88,7 +102,11 @@ fn main() {
             let index = fetch_cran_index();
             let all = resolve_all(&roots, &index);
             let packages = build_urls(&all, &index);
-            println!("Resolved {} packages in {}", all.len(), fmt_duration(t.elapsed().as_millis()));
+            println!(
+                "Resolved {} packages in {}",
+                all.len(),
+                fmt_duration(t.elapsed().as_millis())
+            );
 
             if verbose {
                 println!("  lib_dir:  {}", LIB_DIR);
@@ -98,16 +116,27 @@ fn main() {
             let t = Instant::now();
             let (audited, installed) = download_and_install(&packages, LIB_DIR, verbose);
             if audited > 0 {
-                println!("Audited {} packages in {}", audited, fmt_duration(t.elapsed().as_millis()));
+                println!(
+                    "Audited {} packages in {}",
+                    audited,
+                    fmt_duration(t.elapsed().as_millis())
+                );
             }
             if installed > 0 {
-                println!("Installed {} packages in {}", installed, fmt_duration(t.elapsed().as_millis()));
+                println!(
+                    "Installed {} packages in {}",
+                    installed,
+                    fmt_duration(t.elapsed().as_millis())
+                );
             }
             write_lockfile(&all, &index);
         }
 
         Commands::Add { package } => {
-            println!("add \"{}\" to your arrrv.toml dependencies, then run arrrv sync", package);
+            println!(
+                "add \"{}\" to your arrrv.toml dependencies, then run arrrv sync",
+                package
+            );
             println!("  dependencies = [\"{}\"]", package);
         }
 

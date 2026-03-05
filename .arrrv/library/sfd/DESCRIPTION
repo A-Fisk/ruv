@@ -1,0 +1,28 @@
+Package: sfd
+Title: Space-Filling Design Library
+Version: 0.1.0
+Authors@R: 
+    person("Max", "Kuhn", , "mxkuhn@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-2402-136X"))
+Description: 
+    A collection of pre-optimized space-filling designs, for up to ten 
+    parameters, is contained here. Functions are provided to access designs 
+    described by Husslage et al (2011) <doi:10.1007/s11081-010-9129-8> and
+    Wang and Fang (2005) <doi:10.1142/9789812701190_0040>. The design types 
+    included are Audze-Eglais, MaxiMin, and uniform.
+License: MIT + file LICENSE
+Depends: R (>= 2.10), tibble
+Imports: cli, rlang
+Suggests: ggplot2, spelling, testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+RoxygenNote: 7.2.3.9000
+NeedsCompilation: no
+Packaged: 2024-01-08 13:52:12 UTC; max
+Author: Max Kuhn [aut, cre] (<https://orcid.org/0000-0003-2402-136X>)
+Maintainer: Max Kuhn <mxkuhn@gmail.com>
+Repository: CRAN
+Date/Publication: 2024-01-08 20:20:02 UTC
+Built: R 4.5.0; ; 2025-04-01 20:42:39 UTC; unix

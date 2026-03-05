@@ -1,0 +1,40 @@
+.get_fingerprint        Obtain a identifier for the resamples
+add_resample_id         Augment a data set with resampling identifiers
+apparent                Sampling for the Apparent Error Rate
+as.data.frame.rsplit    Convert an 'rsplit' object to a data frame
+bootstraps              Bootstrap Sampling
+clustering_cv           Cluster Cross-Validation
+complement              Determine the Assessment Samples
+form_pred               Extract Predictor Names from Formula or Terms
+get_rsplit              Retrieve individual rsplits objects from an
+                        rset
+group_bootstraps        Group Bootstraps
+group_mc_cv             Group Monte Carlo Cross-Validation
+group_vfold_cv          Group V-Fold Cross-Validation
+initial_split           Simple Training/Test Set Splitting
+initial_validation_split
+                        Create an Initial Train/Validation/Test Split
+int_pctl                Bootstrap confidence intervals
+labels.rset             Find Labels from rset Object
+labels.rsplit           Find Labels from rsplit Object
+loo_cv                  Leave-One-Out Cross-Validation
+make_splits             Constructors for split objects
+make_strata             Create or Modify Stratification Variables
+manual_rset             Manual resampling
+mc_cv                   Monte Carlo Cross-Validation
+nested_cv               Nested or Double Resampling
+permutations            Permutation sampling
+populate                Add Assessment Indices
+reg_intervals           A convenience function for confidence intervals
+                        with linear-ish parametric models
+reshuffle_rset          "Reshuffle" an rset to re-generate a new rset
+                        with the same parameters
+reverse_splits          Reverse the analysis and assessment sets
+rolling_origin          Rolling Origin Forecast Resampling
+rsample-dplyr           Compatibility with dplyr
+rsample2caret           Convert Resampling Objects to Other Formats
+rset_reconstruct        Extending rsample with new rset subclasses
+slide-resampling        Time-based Resampling
+tidy.rsplit             Tidy Resampling Object
+validation_set          Create a Validation Split for Tuning
+vfold_cv                V-Fold Cross-Validation

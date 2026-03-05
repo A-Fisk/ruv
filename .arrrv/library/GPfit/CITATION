@@ -1,0 +1,14 @@
+bibentry(bibtype = "Article",
+  title        = "{GPfit}: An {R} Package for Fitting a Gaussian Process Model to Deterministic Simulator Outputs",
+  author       = c(
+    person("Blake", "MacDoanld"),
+    person("Pritam", "Ranjan"),
+    person("Hugh", "Chipman")),
+  journal      = "Journal of Statistical Software",
+  year         = "2015",
+  volume       = "64",
+  number       = "12",
+  pages        = "1-23",
+  url          = "https://www.jstatsoft.org/v64/i12/"
+)
+

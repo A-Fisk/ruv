@@ -1,0 +1,36 @@
+.stash_last_result      Save most recent results to search path
+.use_case_weights_with_yardstick
+                        Determine if case weights should be passed on
+                        to yardstick
+augment.tune_results    Augment data with holdout predictions
+autoplot.tune_results   Plot tuning search results
+collect_predictions     Obtain and format results produced by tuning
+                        functions
+compute_metrics         Calculate and format metrics from tuning
+                        functions
+conf_mat_resampled      Compute average confusion matrix across
+                        resamples
+control_bayes           Control aspects of the Bayesian search process
+control_last_fit        Control aspects of the last fit process
+coord_obs_pred          Use same scale for plots of observed vs
+                        predicted values
+example_ames_knn        Example Analysis of Ames Housing Data
+expo_decay              Exponential decay function
+extract-tune            Extract elements of 'tune' objects
+filter_parameters       Remove some tuning parameter results
+finalize_model          Splice final parameters into objects
+fit_best                Fit a model to the numerically optimal
+                        configuration
+fit_resamples           Fit multiple models via resampling
+int_pctl.tune_results   Bootstrap confidence intervals for performance
+                        metrics
+last_fit                Fit the final best model to the training set
+                        and evaluate the test set
+message_wrap            Write a message that respects the line width
+parallelism             Support for parallel processing in tune
+prob_improve            Acquisition function for scoring parameter
+                        combinations
+show_best               Investigate best tuning parameters
+show_notes              Display distinct errors from tune objects
+tune_bayes              Bayesian optimization of model parameters.
+tune_grid               Model tuning via grid search

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Davis Vaughan" />
+
+<meta name="date" content="2025-01-22" />
+
+<title>Multiclass averaging</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Multiclass averaging</h1>
+<h4 class="author">Davis Vaughan</h4>
+<h4 class="date">2025-01-22</h4>
+
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>Classification metrics in <code>yardstick</code> where both the
+<code>truth</code> and <code>estimate</code> columns are factors are
+implemented for the binary and the multiclass case. The multiclass
+implementations use <code>micro</code>, <code>macro</code>, and
+<code>macro_weighted</code> averaging where applicable, and some metrics
+have their own specialized multiclass implementations.</p>
+</div>
+<div id="macro-averaging" class="section level2">
+<h2>Macro averaging</h2>
+<p>Macro averaging reduces your multiclass predictions down to multiple
+sets of binary predictions, calculates the corresponding metric for each
+of the binary cases, and then averages the results together. As an
+example, consider <code>precision</code> for the binary case.</p>
+<p><span class="math display">\[
+Pr = \frac{TP}{TP + FP}
+\]</span></p>
+<p>In the multiclass case, if there were levels <code>A</code>,
+<code>B</code>, <code>C</code> and <code>D</code>, macro averaging
+reduces the problem to multiple one-vs-all comparisons. The
+<code>truth</code> and <code>estimate</code> columns are recoded such
+that the only two levels are <code>A</code> and <code>other</code>, and
+then precision is calculated based on those recoded columns, with
+<code>A</code> being the “relevant” column. This process is repeated for
+the other 3 levels to get a total of 4 precision values. The results are
+then averaged together.</p>
+<p>The formula representation looks like this. For <code>k</code>
+classes:</p>
+<p><span class="math display">\[
+Pr_{macro} = \frac{Pr_1 + Pr_2 + \ldots + Pr_k}{k} = Pr_1 \frac{1}{k} +
+Pr_2 \frac{1}{k} + \ldots + Pr_k \frac{1}{k}
+\]</span></p>
+<p>where <span class="math inline">\(PR_1\)</span> is the precision
+calculated from recoding the multiclass predictions down to just
+<code>class 1</code> and <code>other</code>.</p>
+<p>Note that in macro averaging, all classes get equal weight when
+contributing their portion of the precision value to the total (here
+<code>1/4</code>). This might not be a realistic calculation when you
+have a large amount of class imbalance. In that case, a <em>weighted
+macro average</em> might make more sense, where the weights are
+calculated by the frequency of that class in the <code>truth</code>
+column.</p>
+<p><span class="math display">\[
+Pr_{weighted-macro} = Pr_1 \frac{\#Obs_1}{N} + Pr_2 \frac{\#Obs_2}{N} +
+\ldots + Pr_k \frac{\#Obs_k}{N}
+\]</span></p>
+</div>
+<div id="micro-averaging" class="section level2">
+<h2>Micro averaging</h2>
+<p>Micro averaging treats the entire set of data as an aggregate result,
+and calculates 1 metric rather than <code>k</code> metrics that get
+averaged together.</p>
+<p>For precision, this works by calculating all of the true positive
+results for each class and using that as the numerator, and then
+calculating all of the true positive and false positive results for each
+class, and using that as the denominator.</p>
+<p><span class="math display">\[
+Pr_{micro} = \frac{TP_1 + TP_2 + \ldots + TP_k}{(TP_1 + TP_2 + \ldots +
+TP_k) + (FP_1 + FP_2 + \ldots + FP_k)}
+\]</span> In this case, rather than each <em>class</em> having equal
+weight, each <em>observation</em> gets equal weight. This gives the
+classes with the most observations more power.</p>
+</div>
+<div id="specialized-multiclass-implementations" class="section level2">
+<h2>Specialized multiclass implementations</h2>
+<p>Some metrics have known analytical multiclass extensions, and do not
+need to use averaging to get an estimate of multiclass performance.</p>
+<p>Accuracy and Kappa use the same definitions as their binary
+counterpart, with accuracy counting up the number of correctly predicted
+true values out of the total number of true values, and kappa being a
+linear combination of two accuracy values.</p>
+<p>Matthews correlation coefficient (MCC) has a known multiclass
+generalization as well, sometimes called the <span class="math inline">\(R_K\)</span> statistic. Refer to <a href="https://en.wikipedia.org/wiki/Matthews_correlation_coefficient#Multiclass_case">this
+page</a> for more details.</p>
+<p>ROC AUC is an interesting metric in that it intuitively makes sense
+to perform macro averaging, which computes a multiclass AUC as the
+average of the area under multiple binary ROC curves. However, this
+loses an important property of the ROC AUC statistic in that its binary
+case is insensitive to class distribution. To combat this, a multiclass
+metric was created that retains insensitivity to class distribution, but
+does not have an easy visual interpretation like macro averaging. This
+is implemented as the <code>&quot;hand_till&quot;</code> method, and is the
+default for this metric.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

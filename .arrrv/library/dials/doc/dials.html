@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Working with Tuning Parameters</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rstudio/markdown/inst/resources/prism-xcode.css" data-external="1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yihui/knitr/inst/misc/vignette.css" data-external="1">
+<script src="https://cdn.jsdelivr.net/combine/npm/@xiee/utils/js/code-lang.min.js,npm/@xiee/utils/js/number-captions.min.js,npm/prismjs@1.29.0/components/prism-core.min.js" data-external="1" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" data-external="1" defer></script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Working with Tuning Parameters</h1>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#tuning-parameters" id="toc-tuning-parameters">Tuning
+Parameters</a></li>
+<li><a href="#parameter-objects" id="toc-parameter-objects">Parameter
+Objects</a>
+<ul>
+<li><a href="#numeric-parameters" id="toc-numeric-parameters">Numeric
+Parameters</a></li>
+<li><a href="#discrete-parameters" id="toc-discrete-parameters">Discrete
+Parameters</a></li>
+</ul></li>
+<li><a href="#creating-novel-parameters" id="toc-creating-novel-parameters">Creating Novel Parameters</a></li>
+<li><a href="#unknown-values" id="toc-unknown-values">Unknown
+Values</a></li>
+<li><a href="#parameter-sets" id="toc-parameter-sets">Parameter
+Sets</a></li>
+<li><a href="#parameter-grids" id="toc-parameter-grids">Parameter
+Grids</a></li>
+</ul>
+</div>
+
+<div id="tuning-parameters" class="section level2">
+<h2>Tuning Parameters</h2>
+<p>Some statistical and machine learning models contain <em>tuning
+parameters</em> (also known as <em>hyperparameters</em>), which are
+parameters that cannot be directly estimated by the model. An example
+would be the number of neighbors in a <em>K</em>-nearest neighbors
+model. To determine reasonable values of these elements, some indirect
+method is used such as resampling or profile likelihood. Search methods,
+such as genetic algorithms or Bayesian search can also be used to <a href="https://github.com/topepo/Optimization-Methods-for-Tuning-Predictive-Models">determine
+good values</a>.</p>
+<p>In any case, some information is needed to create a grid or to
+validate whether a candidate value is appropriate (e.g. the number of
+neighbors should be a positive integer). <code>dials</code> is designed
+to:</p>
+<ul>
+<li>Create an easy to use framework for describing and querying tuning
+parameters. This can include getting sequences or random tuning values,
+validating current values, transforming parameters, and other
+tasks.</li>
+<li>Standardize the names of different parameters. Different packages in
+R use different argument names for the same quantities.
+<code>dials</code> proposes some standardized names so that the user
+doesn’t need to memorize the syntactical minutiae of every package.</li>
+<li>Work with the other <a href="https://www.tidymodels.org">tidymodels</a> packages for modeling
+and machine learning using <a href="https://www.tidyverse.org/">tidyverse</a> principles.</li>
+</ul>
+</div>
+<div id="parameter-objects" class="section level2">
+<h2>Parameter Objects</h2>
+<p>Parameter objects contain information about possible values, ranges,
+types, and other aspects. They have two classes: the general
+<code>param</code> class and a more specific subclass related to the
+type of variable. Double and integer valued data have the subclass
+<code>quant_param</code> while character and logicals have
+<code>qual_param</code>. There are some common elements for each:</p>
+<ul>
+<li>Labels are strings that describe the parameter (e.g. “Number of
+Components”).</li>
+<li>Defaults are optional single values that can be set when one
+non-random value is requested.</li>
+</ul>
+<p>Otherwise, the information contained in parameter objects are
+different for different data types.</p>
+<div id="numeric-parameters" class="section level3">
+<h3>Numeric Parameters</h3>
+<p>An example of a numeric tuning parameter is the cost-complexity
+parameter of CART trees, otherwise known as <span class="math inline">\(C_p\)</span>. A parameter object for <span class="math inline">\(C_p\)</span> can be created in <code>dials</code>
+using:</p>
+<pre class="r"><code>library(dials)
+cost_complexity()</code></pre>
+<p>Note that this parameter is handled in log units and the default
+range of values is between <code>10^-10</code> and <code>0.1</code>. The
+range of possible values can be returned and changed based on some
+utility functions.</p>
+<pre class="r"><code>cost_complexity() |&gt; range_get()
+#&gt; $lower
+#&gt; [1] 1e-10
+#&gt; 
+#&gt; $upper
+#&gt; [1] 0.1
+cost_complexity() |&gt; range_set(c(-5, 1))
+
+# Or using the `range` argument
+# during creation
+cost_complexity(range = c(-5, 1))</code></pre>
+<p>Values for this parameter can be obtained in a few different ways. To
+get a sequence of values that span the range:</p>
+<pre class="r"><code># Natural units:
+cost_complexity() |&gt; value_seq(n = 4)
+#&gt; [1] 1e-10 1e-07 1e-04 1e-01
+
+# Stay in the transformed space:
+cost_complexity() |&gt; value_seq(n = 4, original = FALSE)
+#&gt; [1] -10  -7  -4  -1</code></pre>
+<p>Random values can be sampled too. A random uniform distribution is
+used (between the range values). Since this parameter has a
+transformation associated with it, the values are simulated in the
+transformed scale and then returned in the natural units (although the
+<code>original</code> argument can be used here):</p>
+<pre class="r"><code>set.seed(5473)
+cost_complexity() |&gt; value_sample(n = 4)
+#&gt; [1] 6.91e-09 8.46e-04 3.45e-06 5.90e-10</code></pre>
+<p>For CART trees, there is a discrete set of values that exist for a
+given data set. It may be a good idea to assign these possible values to
+the object. We can get them by fitting an initial <code>rpart</code>
+model and then adding the values to the object. For <code>mtcars</code>,
+there are only three values:</p>
+<pre class="r"><code>library(rpart)
+cart_mod &lt;- rpart(mpg ~ ., data = mtcars, control = rpart.control(cp = 0.000001))
+cart_mod$cptable
+#&gt;         CP nsplit rel error xerror  xstd
+#&gt; 1 0.643125      0     1.000  1.064 0.258
+#&gt; 2 0.097484      1     0.357  0.687 0.180
+#&gt; 3 0.000001      2     0.259  0.576 0.126
+cp_vals &lt;- cart_mod$cptable[, &quot;CP&quot;]
+
+# We should only keep values associated with at least one split:
+cp_vals &lt;- cp_vals[ cart_mod$cptable[, &quot;nsplit&quot;] &gt; 0 ]
+
+# Here the specific Cp values, on their natural scale, are added:
+mtcars_cp &lt;- cost_complexity() |&gt; value_set(cp_vals)
+#&gt; Error in `value_set()`:
+#&gt; ! Some values are not valid: 0.0974840733898344 and 1e-06.</code></pre>
+<p>The error occurs because the values are not in the transformed
+scale:</p>
+<pre class="r"><code>mtcars_cp &lt;- cost_complexity() |&gt; value_set(log10(cp_vals))
+mtcars_cp</code></pre>
+<p>Now, if a sequence or random sample is requested, it uses the set
+values:</p>
+<pre class="r"><code>mtcars_cp |&gt; value_seq(2)
+#&gt; [1] 0.097484 0.000001
+# Sampling specific values is done with replacement
+mtcars_cp |&gt; 
+  value_sample(20) |&gt; 
+  table()
+#&gt; 
+#&gt;              1e-06 0.0974840733898344 
+#&gt;                  9                 11</code></pre>
+<p>Any transformations from the <code>scales</code> package can be used
+with the numeric parameters, or a custom transformation generated with
+<code>scales::trans_new()</code>.</p>
+<pre class="r"><code>trans_raise &lt;- scales::trans_new(
+  &quot;raise&quot;, 
+  transform = function(x) 2^x , 
+  inverse = function(x) -log2(x)
+)
+custom_cost &lt;- cost(range = c(1, 10), trans = trans_raise)
+custom_cost</code></pre>
+<p>Note that if a transformation is used, the <code>range</code>
+argument specifies the parameter range <em>on the transformed
+scale</em>. For this version of <code>cost()</code>, parameter values
+are sampled between 1 and 10 and then transformed back to the original
+scale by the inverse <code>-log2()</code>. So on the original scale, the
+sampled values are between <code>-log2(10)</code> and
+<code>-log2(1)</code>.</p>
+<pre class="r"><code>-log2(c(10, 1))
+#&gt; [1] -3.32  0.00
+value_sample(custom_cost, 100) |&gt; range()
+#&gt; [1] -3.3172 -0.0314</code></pre>
+</div>
+<div id="discrete-parameters" class="section level3">
+<h3>Discrete Parameters</h3>
+<p>In the discrete case there is no notion of a range. The parameter
+objects are defined by their discrete values. For example, consider a
+parameter for the types of kernel functions that is used with distance
+functions:</p>
+<pre class="r"><code>weight_func()</code></pre>
+<p>The helper functions are analogues to the quantitative
+parameters:</p>
+<pre class="r"><code># redefine values
+weight_func() |&gt; value_set(c(&quot;rectangular&quot;, &quot;triangular&quot;))
+weight_func() |&gt; value_sample(3)
+#&gt; [1] &quot;triangular&quot; &quot;inv&quot;        &quot;triweight&quot;
+
+# the sequence is returned in the order of the levels
+weight_func() |&gt; value_seq(3)
+#&gt; [1] &quot;rectangular&quot;  &quot;triangular&quot;   &quot;epanechnikov&quot;</code></pre>
+</div>
+</div>
+<div id="creating-novel-parameters" class="section level2">
+<h2>Creating Novel Parameters</h2>
+<p>The package contains two constructors that can be used to create new
+quantitative and qualitative parameters, <code>new_quant_param()</code>
+and <code>new_qual_param()</code>. The <a href="https://www.tidymodels.org/learn/develop/parameters/">How to
+create a tuning parameter function</a> article walks you through a
+detailed example.</p>
+</div>
+<div id="unknown-values" class="section level2">
+<h2>Unknown Values</h2>
+<p>There are some cases where the range of parameter values are data
+dependent. For example, the upper bound on the number of neighbors
+cannot be known if the number of data points in the training set is not
+known. For that reason, some parameters have an <em>unknown</em>
+placeholder:</p>
+<pre class="r"><code>mtry()
+sample_size()
+num_terms()
+num_comp()
+# and so on</code></pre>
+<p>These values must be initialized prior to generating parameter
+values. The <code>finalize()</code> methods can be used to help remove
+the unknowns:</p>
+<pre class="r"><code>finalize(mtry(), x = mtcars[, -1])</code></pre>
+</div>
+<div id="parameter-sets" class="section level2">
+<h2>Parameter Sets</h2>
+<p>These are collection of parameters used in a model, recipe, or other
+object. They can also be created manually and can have alternate
+identification fields:</p>
+<pre class="r"><code>glmnet_set &lt;- parameters(list(lambda = penalty(), alpha = mixture()))
+glmnet_set
+
+# can be updated too
+update(glmnet_set, alpha = mixture(c(.3, .6)))</code></pre>
+<p>These objects can be very helpful when creating tuning grids.</p>
+</div>
+<div id="parameter-grids" class="section level2">
+<h2>Parameter Grids</h2>
+<p>Sets or combinations of parameters can be created for use in grid
+search. <code>grid_regular()</code>, <code>grid_random()</code>,
+<code>grid_max_entropy()</code>, and <code>grid_latin_hypercube()</code>
+take any number of <code>param</code> objects or a parameter set.</p>
+<p>For example, for a glmnet model, a regular grid might be:</p>
+<pre class="r"><code>grid_regular(
+  mixture(),
+  penalty(),
+  levels = 3 # or c(3, 4), etc
+)
+#&gt; # A tibble: 9 × 2
+#&gt;   mixture      penalty
+#&gt;     &lt;dbl&gt;        &lt;dbl&gt;
+#&gt; 1     0   0.0000000001
+#&gt; 2     0.5 0.0000000001
+#&gt; 3     1   0.0000000001
+#&gt; 4     0   0.00001     
+#&gt; 5     0.5 0.00001     
+#&gt; 6     1   0.00001     
+#&gt; 7     0   1           
+#&gt; 8     0.5 1           
+#&gt; 9     1   1</code></pre>
+<p>and, similarly, a random grid is created using</p>
+<pre class="r"><code>set.seed(1041)
+grid_random(
+  mixture(),
+  penalty(),
+  size = 6 
+)
+#&gt; # A tibble: 6 × 2
+#&gt;   mixture     penalty
+#&gt;     &lt;dbl&gt;       &lt;dbl&gt;
+#&gt; 1   0.200 0.0176     
+#&gt; 2   0.750 0.000388   
+#&gt; 3   0.191 0.000000159
+#&gt; 4   0.929 0.00000176 
+#&gt; 5   0.143 0.0442     
+#&gt; 6   0.973 0.0110</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -7,7 +7,9 @@ pub fn cache_dir() -> PathBuf {
 }
 
 pub fn package_cache_path(name: &str, version: &str) -> PathBuf {
-    cache_dir().join("packages").join(format!("{}_{}", name, version))
+    cache_dir()
+        .join("packages")
+        .join(format!("{}_{}", name, version))
 }
 
 pub fn is_cached(name: &str, version: &str) -> bool {

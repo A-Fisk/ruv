@@ -1,0 +1,28 @@
+%>%                     Pipe
+assume                  Define a theoretical distribution
+calculate               Calculate summary statistics
+chisq_stat              Tidy chi-squared test statistic
+chisq_test              Tidy chi-squared test
+deprecated              Deprecated functions and objects
+fit.infer               Fit linear models to infer objects
+generate                Generate resamples, permutations, or
+                        simulations
+get_confidence_interval
+                        Compute confidence interval
+get_p_value             Compute p-value
+gss                     Subset of data from the General Social Survey
+                        (GSS).
+hypothesize             Declare a null hypothesis
+infer                   infer: a grammar for statistical inference
+observe                 Calculate observed statistics
+print.infer             Print methods
+prop_test               Tidy proportion test
+rep_sample_n            Perform repeated sampling
+shade_confidence_interval
+                        Add information about confidence interval
+shade_p_value           Shade histogram area beyond an observed
+                        statistic
+specify                 Specify response and explanatory variables
+t_stat                  Tidy t-test statistic
+t_test                  Tidy t-test
+visualize               Visualize statistical inference

@@ -1,0 +1,33 @@
+useDynLib(DiceDesign, .registration = TRUE, .fixes = "C_") 
+
+export(
+ coverage,
+ discrepancyCriteria,
+ discrepESE_LHS,
+ discrepSA_LHS,
+ dmaxDesign, 
+ factDesign,
+ faureprimeDesign,
+ lhsDesign,
+ maximinESE_LHS,
+ maximinSA_LHS,
+ meshRatio,
+ mindist,
+ mstCriteria,
+ nolhDesign,
+ nolhdrDesign,
+ olhDesign,
+ phiP,
+ rss2d,
+ rss3d,
+ runif.faure,
+ scaleDesign,
+ straussDesign,
+ unif.test.quantile,
+ unif.test.statistic,
+ unscaleDesign,
+ wspDesign,
+ xDRDN
+)
+
+import(graphics, grDevices, stats)

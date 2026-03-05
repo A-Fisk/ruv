@@ -1,0 +1,11 @@
+tidymodels-package	tidymodels-package
+pkg_deps	pkg_deps
+tags	tag_show
+tag_attach	tag_show
+tag_show	tag_show
+tag_update	tag_show
+tidymodels	tidymodels-package
+tidymodels_conflicts	tidymodels_conflicts
+tidymodels_packages	tidymodels_packages
+tidymodels_prefer	tidymodels_prefer
+tidymodels_update	tidymodels_update

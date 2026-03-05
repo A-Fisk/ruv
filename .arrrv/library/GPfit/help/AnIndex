@@ -1,0 +1,14 @@
+GPfit-package	GPfit-package
+corr_matrix	corr_matrix
+fitted.GP	predict
+GPfit	GPfit-package
+GP_deviance	GP_deviance
+GP_fit	GP_fit
+plot	plot
+plot.GP	plot
+predict	predict
+predict.GP	predict
+print.GP	print.GP
+scale_norm	scale_norm
+sig_invb	sig_invb
+summary.GP	summary.GP

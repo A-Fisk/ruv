@@ -1,0 +1,47 @@
+Package: workflows
+Title: Modeling Workflows
+Version: 1.3.0
+Authors@R: c(
+    person("Davis", "Vaughan", , "davis@posit.co", role = "aut"),
+    person("Simon", "Couch", , "simon.couch@posit.co", role = "aut",
+           comment = c(ORCID = "0000-0001-5676-5107")),
+    person("Hannah", "Frick", , "hannah@posit.co", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-6049-5258")),
+    person("Posit Software, PBC", role = c("cph", "fnd"),
+           comment = c(ROR = "03wc8by49"))
+  )
+Description: Managing both a 'parsnip' model and a preprocessor, such as a
+    model formula or recipe from 'recipes', can often be challenging. The
+    goal of 'workflows' is to streamline this process by bundling the
+    model alongside the preprocessor, all within the same object.
+License: MIT + file LICENSE
+URL: https://github.com/tidymodels/workflows,
+        https://workflows.tidymodels.org
+BugReports: https://github.com/tidymodels/workflows/issues
+Depends: R (>= 4.1)
+Imports: cli (>= 3.3.0), generics (>= 0.1.2), glue (>= 1.6.2), hardhat
+        (>= 1.4.2), lifecycle (>= 1.0.3), modelenv (>= 0.1.0), parsnip
+        (>= 1.2.1.9000), recipes (>= 1.0.10.9000), rlang (>= 1.1.0),
+        sparsevctrs (>= 0.1.0.9003), tidyselect (>= 1.2.0), vctrs (>=
+        0.4.1), withr
+Suggests: butcher (>= 0.2.0), covr, dials (>= 1.0.0), glmnet, knitr,
+        magrittr, Matrix, methods, modeldata (>= 1.0.0), probably,
+        rmarkdown, tailor (>= 0.1.0), testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/Needs/website: dplyr, ggplot2, tidyr, tidyverse/tidytemplate,
+        yardstick
+Config/testthat/edition: 3
+Config/usethis/last-upkeep: 2025-04-25
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+NeedsCompilation: no
+Packaged: 2025-08-26 10:44:25 UTC; hannah
+Author: Davis Vaughan [aut],
+  Simon Couch [aut] (ORCID: <https://orcid.org/0000-0001-5676-5107>),
+  Hannah Frick [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-6049-5258>),
+  Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)
+Maintainer: Hannah Frick <hannah@posit.co>
+Repository: CRAN
+Date/Publication: 2025-08-27 08:10:02 UTC
+Built: R 4.5.0; ; 2025-09-01 02:37:26 UTC; unix

@@ -1,0 +1,168 @@
+---
+title: "Row-wise iteration with slider"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Row-wise iteration with slider}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(slider)
+library(dplyr, warn.conflicts = FALSE)
+```
+
+slider is implemented with a new convention that began in vctrs, treating a data frame as a vector of rows. This makes `slide()` a _row-wise iterator_ over a data frame, which can be useful for solving some previously tricky problems in the tidyverse.
+
+The point of this vignette is to go through a few examples of a row-oriented workflow. The examples are adapted from [Jenny Bryan's talk of row-oriented workflows with purrr](https://github.com/jennybc/row-oriented-workflows), to show how this workflow is improved with `slide()`.
+
+## Row-wise iteration
+
+Let's first explore using `slide()` as a row wise iterator in general. We'll start with this simple data frame.
+
+```{r}
+example <- tibble(
+  x = 1:4,
+  y = letters[1:4]
+)
+
+example
+```
+
+If we were to pass the `x` column to `slide()`, it would iterate over that using the window specified by `.before`, `.after`, and `.complete`. The defaults are similar to `purrr::map()`.
+
+```{r}
+slide(example$x, ~.x)
+
+slide(example$x, ~.x, .before = 2)
+```
+
+When applied to the entire `example` data frame, `map()` treats it as a list and iterates over the columns. `slide()`, on the other hand, iterates over rows. This is consistent with the vctrs idea of _size_, which is the length of an atomic vector, but the number of rows of a data frame or matrix. `slide()` always returns an object with the same _size_ as its input. Because the number of rows in `example` is 4, the output size is 4 and you get one row per element in the output.
+
+```{r}
+slide(example, ~.x)
+```
+
+You can still use the other arguments to `slide()` to control the window size.
+
+```{r}
+# Current row + 2 before
+slide(example, ~.x, .before = 2)
+
+# Center aligned, with no partial results
+slide(example, ~.x, .before = 1, .after = 1, .complete = TRUE)
+```
+
+Often, using `slide()` with its defaults will be enough, as it is common to iterate over just one row at a time.
+
+## Varying parameter combinations
+
+A nice use of a tibble is as a structured way to store parameter combinations. For example, we could store multiple rows of parameter combinations where each row could be supplied to `runif()` to generate different types of uniform random variables. 
+
+```{r}
+parameters <- tibble(
+  n = 1:3,
+  min = c(0, 10, 100),
+  max = c(1, 100, 1000)
+)
+
+parameters
+```
+
+With `slide()` you can pass these parameters on to `runif()` by iterating over `parameters` row-wise. This gives you access to the data frame of the current row through `.x`. Because it is a data frame, you have access to each column by name. Notice how there is no restriction that the columns of the data frame be the same as the argument names of `runif()`.
+
+```{r}
+set.seed(123)
+
+slide(parameters, ~runif(.x$n, .x$min, .x$max))
+```
+
+This can also be done with `purrr::pmap()`, but you either have to name the `parameters` tibble with the same column names as the function you are calling, or you have to access each column positionally as `..1`, `..3`, etc.
+
+A third alternative that works nicely here is to use `rowwise()` before calling `mutate()`. Just remember to wrap the result of `runif()` in a `list()`!
+
+```{r}
+parameters %>%
+  rowwise() %>%
+  mutate(random = list(runif(n, min, max)))
+```
+
+## Sliding inside a mutate()
+
+For these examples, we will consider a `company` data set containing the `day` a sale was made, the number of calls, `n_calls`, that were placed on that day, and the number of `sales` that resulted from those calls.
+
+```{r}
+company <- tibble(
+  day = rep(c(1, 2), each = 5),
+  sales = sample(100, 10),
+  n_calls = sales + sample(1000, 10)
+)
+
+company
+```
+
+When `slide()`-ing inside of a `mutate()` call, there are a few scenarios that can arise. First, you might want to slide over a single column. This is easy enough in both the un-grouped and grouped case. 
+
+```{r}
+company %>%
+  mutate(sales_roll = slide_dbl(sales, mean, .before = 2, .complete = TRUE))
+
+company %>%
+  group_by(day) %>%
+  mutate(sales_roll = slide_dbl(sales, mean, .before = 2, .complete = TRUE))
+```
+
+If you need to apply a sliding function that takes a data frame as input to slide over, then you'll need some way to access the "current" data frame that `mutate()` is acting on. As of dplyr 1.0.0, you can access this with `cur_data()`. When there is only 1 group, the current data frame is the input itself, but when there are multiple groups `cur_data()` returns the data frame corresponding to the current group that is being worked on.
+
+As an example, imagine you want to fit a rolling linear model predicting sales from the number of calls. The most robust way to do this in a `mutate()` is to use `cur_data()` to access the data frame to slide over. Since `slide()` iterates row-wise, `.x` corresponds to the current slice of the current data frame.
+
+```{r}
+company %>%
+  mutate(
+    regressions = slide(
+      .x = cur_data(),
+      .f = ~lm(sales ~ n_calls, .x), 
+      .before = 2, 
+      .complete = TRUE
+    )
+  )
+```
+
+When you group by `day`, `cur_data()` will first correspond to all rows where `day == 1`, and then where `day == 2`. Notice how the output has two clumps of `NULL`s, proving that the rolling regressions "restarted" between groups.
+
+```{r}
+company %>%
+  group_by(day) %>%
+  mutate(
+    regressions = slide(
+      .x = cur_data(),
+      .f = ~lm(sales ~ n_calls, .x), 
+      .before = 2, 
+      .complete = TRUE
+    )
+  )
+```
+
+In the past, you might have used `.` in place of `cur_data()`. This `.` is actually from the magrittr `%>%`, not from dplyr, and has a few issues. The biggest one is that it won't work with grouped data frames, it will always return the entire data set rather than the current group's data frame. The other issue is that, even with un-grouped data frames, you can't take advantage of the sequential nature of how `mutate()` evaluates expressions. For example, the following doesn't work because `.` corresponds to `company` without the updated `log_sales` column.
+
+```{r, error=TRUE}
+company %>%
+  mutate(
+    log_sales = log10(sales),
+    regressions = slide(
+      .x = .,
+      .f = ~lm(log_sales ~ n_calls, .x), 
+      .before = 2, 
+      .complete = TRUE
+    )
+  )
+```

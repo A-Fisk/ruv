@@ -1,0 +1,17 @@
+block                   Break a vector into blocks
+hop                     Hop
+hop2                    Hop along multiple inputs simultaneously
+hop_index               Hop relative to an index
+hop_index2              Hop along multiple inputs simultaneously
+                        relative to an index
+slide                   Slide
+slide2                  Slide over multiple inputs simultaneously
+slide_index             Slide relative to an index
+slide_index2            Slide along multiples inputs simultaneously
+                        relative to an index
+slide_period            Slide relative to an index chunked by period
+slide_period2           Slide along multiple inputs simultaneously
+                        relative to an index chunked by period
+summary-index           Specialized sliding functions relative to an
+                        index
+summary-slide           Specialized sliding functions

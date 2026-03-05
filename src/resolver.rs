@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use crate::index::Package;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 pub fn resolve(root: &str, index: &HashMap<String, Package>) -> Vec<String> {
     let mut visited: HashSet<String> = HashSet::new();
@@ -43,18 +43,27 @@ mod tests {
 
     fn make_index() -> HashMap<String, Package> {
         let mut index = HashMap::new();
-        index.insert("ggplot2".to_string(), Package {
-            version: "3.5.1".to_string(),
-            deps: vec!["rlang".to_string(), "scales".to_string()],
-        });
-        index.insert("rlang".to_string(), Package {
-            version: "1.1.4".to_string(),
-            deps: vec![],
-        });
-        index.insert("scales".to_string(), Package {
-            version: "1.3.0".to_string(),
-            deps: vec!["rlang".to_string()],
-        });
+        index.insert(
+            "ggplot2".to_string(),
+            Package {
+                version: "3.5.1".to_string(),
+                deps: vec!["rlang".to_string(), "scales".to_string()],
+            },
+        );
+        index.insert(
+            "rlang".to_string(),
+            Package {
+                version: "1.1.4".to_string(),
+                deps: vec![],
+            },
+        );
+        index.insert(
+            "scales".to_string(),
+            Package {
+                version: "1.3.0".to_string(),
+                deps: vec!["rlang".to_string()],
+            },
+        );
         index
     }
 

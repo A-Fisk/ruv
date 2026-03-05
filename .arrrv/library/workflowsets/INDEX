@@ -1,0 +1,24 @@
+as_workflow_set         Convert existing objects to a workflow set
+autoplot.workflow_set   Plot the results of a workflow set
+chi_features_set        Chicago Features Example Data
+collect_metrics.workflow_set
+                        Obtain and format results produced by tuning
+                        functions for workflow sets
+comment_add             Add annotations and comments for workflows
+extract_workflow_set_result
+                        Extract elements of workflow sets
+fit_best.workflow_set   Fit a model to the numerically optimal
+                        configuration
+leave_var_out_formulas
+                        Create formulas without each predictor
+option_add              Add and edit options saved in a workflow set
+option_list             Make a classed list of options
+pull_workflow_set_result
+                        Extract elements from a workflow set
+rank_results            Rank the results by a metric
+two_class_set           Two Class Example Data
+update_workflow_model   Update components of a workflow within a
+                        workflow set
+workflow_map            Process a series of workflows
+workflow_set            Generate a set of workflow objects from
+                        preprocessing and model objects

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Using tags</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rstudio/markdown/inst/resources/prism-xcode.css" data-external="1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yihui/knitr/inst/misc/vignette.css" data-external="1">
+<script src="https://cdn.jsdelivr.net/combine/npm/@xiee/utils/js/code-lang.min.js,npm/@xiee/utils/js/number-captions.min.js,npm/prismjs@1.29.0/components/prism-core.min.js" data-external="1" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" data-external="1" defer></script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Using tags</h1>
+
+
+
+<p>The tidymodels framework has a set of core packages that are loaded
+and attached when the tidymodels package is loaded.</p>
+<p>There are other sets of packages that can be attached via
+<code>tidymodels::tag_attach(tag)</code> where the <code>tag</code> is a
+character string. Existing tags are:</p>
+<pre class="r"><code>library(tidymodels)
+tag_show()
+#&gt; All tags:
+#&gt; 
+#&gt; Bayesian analysis: &#39;tidyposterior&#39;, &#39;tidybayes&#39;
+#&gt; deep learning: &#39;keras&#39;
+#&gt; ensembles: &#39;modeltime.ensemble&#39;, &#39;stacks&#39;
+#&gt; feature engineering: &#39;keras&#39;, &#39;textrecipes&#39;
+#&gt; parallel processing: &#39;furrr&#39;
+#&gt; parameter tuning: &#39;finetune&#39;
+#&gt; resampling: &#39;infer&#39;, &#39;tidyposterior&#39;
+#&gt; text analysis: &#39;tidytext&#39;, &#39;keras&#39;, &#39;textrecipes&#39;
+#&gt; time series: &#39;timetk&#39;, &#39;tidyquant&#39;, &#39;sweep&#39;, &#39;modeltime&#39;, &#39;tsibble&#39;, &#39;fable&#39;
+#&gt; extra recipes: &#39;embed&#39;, &#39;textrecipes&#39;, &#39;themis&#39;
+#&gt; extra models: &#39;discrim&#39;, &#39;plsmod&#39;, &#39;rules&#39;, &#39;poissonreg&#39;, &#39;baguette&#39;
+#&gt; visualization: &#39;dotwhisker&#39;, &#39;ggforce&#39;, &#39;patchwork&#39;, &#39;gganimate&#39;, &#39;ggrepel&#39;
+#&gt; interpretation: &#39;vip&#39;, &#39;lime&#39;, &#39;DALEXtra&#39;</code></pre>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

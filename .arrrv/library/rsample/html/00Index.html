@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head><title>R: General Resampling Infrastructure</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<link rel="stylesheet" type="text/css" href="R.css">
+</head><body><div class="container">
+<h1> General Resampling Infrastructure
+<img class="toplogo" src="../../../doc/html/Rlogo.svg" alt="[R logo]">
+</h1>
+<hr>
+<div style="text-align: center;">
+<a href="../../../doc/html/packages.html"><img class="arrow" src="../../../doc/html/left.jpg" alt="[Up]"></a>
+<a href="../../../doc/html/index.html"><img class="arrow" src="../../../doc/html/up.jpg" alt="[Top]"></a>
+</div><h2>Documentation for package &lsquo;rsample&rsquo; version 1.3.2</h2>
+
+<ul><li><a href="../DESCRIPTION" type="text/plain; charset=utf-8">DESCRIPTION file</a>.</li>
+<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>
+<li><a href="../NEWS.md">Package NEWS</a>.</li>
+</ul>
+
+<h2>Help Pages</h2>
+
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="get_fingerprint.html">.get_fingerprint</a></td>
+<td>Obtain a identifier for the resamples</td></tr>
+<tr><td style="width: 25%;"><a href="get_fingerprint.html">.get_fingerprint.default</a></td>
+<td>Obtain a identifier for the resamples</td></tr>
+<tr><td style="width: 25%;"><a href="get_fingerprint.html">.get_fingerprint.rset</a></td>
+<td>Obtain a identifier for the resamples</td></tr>
+<tr><td style="width: 25%;"><a href="add_resample_id.html">add_resample_id</a></td>
+<td>Augment a data set with resampling identifiers</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">analysis</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">analysis.default</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">analysis.rsplit</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">analysis.val_split</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="apparent.html">apparent</a></td>
+<td>Sampling for the Apparent Error Rate</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">as.data.frame.rsplit</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">assessment</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">assessment.default</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="as.data.frame.rsplit.html">assessment.rsplit</a></td>
+<td>Convert an 'rsplit' object to a data frame</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">assessment.val_split</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="bootstraps.html">bootstraps</a></td>
+<td>Bootstrap Sampling</td></tr>
+<tr><td style="width: 25%;"><a href="rsample2caret.html">caret2rsample</a></td>
+<td>Convert Resampling Objects to Other Formats</td></tr>
+<tr><td style="width: 25%;"><a href="clustering_cv.html">clustering_cv</a></td>
+<td>Cluster Cross-Validation</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.apparent_split</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.rof_split</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.rsplit</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.sliding_index_split</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.sliding_period_split</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="complement.html">complement.sliding_window_split</a></td>
+<td>Determine the Assessment Samples</td></tr>
+<tr><td style="width: 25%;"><a href="form_pred.html">form_pred</a></td>
+<td>Extract Predictor Names from Formula or Terms</td></tr>
+<tr><td style="width: 25%;"><a href="get_rsplit.html">get_rsplit</a></td>
+<td>Retrieve individual rsplits objects from an rset</td></tr>
+<tr><td style="width: 25%;"><a href="get_rsplit.html">get_rsplit.default</a></td>
+<td>Retrieve individual rsplits objects from an rset</td></tr>
+<tr><td style="width: 25%;"><a href="get_rsplit.html">get_rsplit.rset</a></td>
+<td>Retrieve individual rsplits objects from an rset</td></tr>
+<tr><td style="width: 25%;"><a href="group_bootstraps.html">group_bootstraps</a></td>
+<td>Group Bootstraps</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">group_initial_split</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">group_initial_validation_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="group_mc_cv.html">group_mc_cv</a></td>
+<td>Group Monte Carlo Cross-Validation</td></tr>
+<tr><td style="width: 25%;"><a href="group_vfold_cv.html">group_vfold_cv</a></td>
+<td>Group V-Fold Cross-Validation</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">initial_split</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">initial_time_split</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">initial_validation_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">initial_validation_time_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_bca</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_bca.bootstraps</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_bca.default</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_pctl</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_pctl.bootstraps</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_pctl.default</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_t</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_t.bootstraps</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="int_pctl.html">int_t.default</a></td>
+<td>Bootstrap confidence intervals</td></tr>
+<tr><td style="width: 25%;"><a href="labels.rset.html">labels.rset</a></td>
+<td>Find Labels from rset Object</td></tr>
+<tr><td style="width: 25%;"><a href="labels.rsplit.html">labels.rsplit</a></td>
+<td>Find Labels from rsplit Object</td></tr>
+<tr><td style="width: 25%;"><a href="labels.rset.html">labels.vfold_cv</a></td>
+<td>Find Labels from rset Object</td></tr>
+<tr><td style="width: 25%;"><a href="loo_cv.html">loo_cv</a></td>
+<td>Leave-One-Out Cross-Validation</td></tr>
+<tr><td style="width: 25%;"><a href="make_splits.html">make_splits</a></td>
+<td>Constructors for split objects</td></tr>
+<tr><td style="width: 25%;"><a href="make_splits.html">make_splits.data.frame</a></td>
+<td>Constructors for split objects</td></tr>
+<tr><td style="width: 25%;"><a href="make_splits.html">make_splits.default</a></td>
+<td>Constructors for split objects</td></tr>
+<tr><td style="width: 25%;"><a href="make_splits.html">make_splits.list</a></td>
+<td>Constructors for split objects</td></tr>
+<tr><td style="width: 25%;"><a href="make_strata.html">make_strata</a></td>
+<td>Create or Modify Stratification Variables</td></tr>
+<tr><td style="width: 25%;"><a href="manual_rset.html">manual_rset</a></td>
+<td>Manual resampling</td></tr>
+<tr><td style="width: 25%;"><a href="mc_cv.html">mc_cv</a></td>
+<td>Monte Carlo Cross-Validation</td></tr>
+<tr><td style="width: 25%;"><a href="nested_cv.html">nested_cv</a></td>
+<td>Nested or Double Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="permutations.html">permutations</a></td>
+<td>Permutation sampling</td></tr>
+<tr><td style="width: 25%;"><a href="populate.html">populate</a></td>
+<td>Add Assessment Indices</td></tr>
+<tr><td style="width: 25%;"><a href="reg_intervals.html">reg_intervals</a></td>
+<td>A convenience function for confidence intervals with linear-ish parametric models</td></tr>
+<tr><td style="width: 25%;"><a href="reshuffle_rset.html">reshuffle_rset</a></td>
+<td>"Reshuffle" an rset to re-generate a new rset with the same parameters</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits.default</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits.permutations</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits.perm_split</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits.rset</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="reverse_splits.html">reverse_splits.rsplit</a></td>
+<td>Reverse the analysis and assessment sets</td></tr>
+<tr><td style="width: 25%;"><a href="rolling_origin.html">rolling_origin</a></td>
+<td>Rolling Origin Forecast Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="rsample-dplyr.html">rsample-dplyr</a></td>
+<td>Compatibility with dplyr</td></tr>
+<tr><td style="width: 25%;"><a href="rsample2caret.html">rsample2caret</a></td>
+<td>Convert Resampling Objects to Other Formats</td></tr>
+<tr><td style="width: 25%;"><a href="rset_reconstruct.html">rset_reconstruct</a></td>
+<td>Extending rsample with new rset subclasses</td></tr>
+<tr><td style="width: 25%;"><a href="slide-resampling.html">slide-resampling</a></td>
+<td>Time-based Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="slide-resampling.html">sliding_index</a></td>
+<td>Time-based Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="slide-resampling.html">sliding_period</a></td>
+<td>Time-based Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="slide-resampling.html">sliding_window</a></td>
+<td>Time-based Resampling</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">testing</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">testing.default</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">testing.initial_validation_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">testing.rsplit</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">testing.val_split</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="tidy.rsplit.html">tidy.nested_cv</a></td>
+<td>Tidy Resampling Object</td></tr>
+<tr><td style="width: 25%;"><a href="tidy.rsplit.html">tidy.rset</a></td>
+<td>Tidy Resampling Object</td></tr>
+<tr><td style="width: 25%;"><a href="tidy.rsplit.html">tidy.rsplit</a></td>
+<td>Tidy Resampling Object</td></tr>
+<tr><td style="width: 25%;"><a href="tidy.rsplit.html">tidy.vfold_cv</a></td>
+<td>Tidy Resampling Object</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">training</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">training.default</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">training.initial_validation_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="initial_split.html">training.rsplit</a></td>
+<td>Simple Training/Test Set Splitting</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">training.val_split</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">validation</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">validation.default</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="initial_validation_split.html">validation.initial_validation_split</a></td>
+<td>Create an Initial Train/Validation/Test Split</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">validation.val_split</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="validation_set.html">validation_set</a></td>
+<td>Create a Validation Split for Tuning</td></tr>
+<tr><td style="width: 25%;"><a href="vfold_cv.html">vfold_cv</a></td>
+<td>V-Fold Cross-Validation</td></tr>
+</table>
+</div></body></html>

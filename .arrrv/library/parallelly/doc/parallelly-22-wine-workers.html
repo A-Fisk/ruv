@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Parallel Workers Running MS Windows via Wine</title>
+<style>
+body {
+  font-family: sans-serif;
+  line-height: 1.6;
+  padding-left: 3ex;
+  padding-right: 3ex;
+  background-color: white;
+  color: black;
+}
+
+a {
+  color: #4183C4;
+  text-decoration: none;
+}
+
+h1, h2, h3 {
+  margin: 2ex 0 1ex;
+  padding: 0;
+  font-weight: bold;
+  -webkit-font-smoothing: antialiased;
+  cursor: text;
+  position: relative;
+}
+
+h2 {
+  border-bottom: 1px solid #cccccc;
+}
+
+code {
+  margin: 0 2px;
+  padding: 0 5px;
+  white-space: nowrap;
+  border: 1px solid #eaeaea;
+  background-color: #f8f8f8;
+  border-radius: 3px;
+}
+
+pre code {
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  border: none;
+  background: transparent;
+}
+
+pre {
+  background-color: #f8f8f8;
+  border: 1px solid #cccccc;
+  line-height: 2.5x;
+  overflow: auto;
+  padding: 0.6ex 1ex;
+  border-radius: 3px;
+}
+
+pre code {
+  background-color: transparent;
+  border: none;
+}
+</style>
+</head>
+<body>
+<h1>Parallel Workers Running MS Windows via Wine</h1>
+<!--
+%\VignetteIndexEntry{Parallel Workers Running MS Windows via Wine}
+%\VignetteAuthor{Henrik Bengtsson}
+%\VignetteKeyword{R}
+%\VignetteKeyword{package}
+%\VignetteKeyword{vignette}
+%\VignetteEngine{parallelly::selfonly}
+-->
+<h1>Introduction</h1>
+<p>This vignette shows how to set up parallel workers running R for MS
+Windows via Wine (<a href="https://www.winehq.org/">https://www.winehq.org/</a>) on Linux and macOS. This
+can be useful when we need to run R code or call R packages that work
+only on MS Windows.</p>
+<p>The below instructions assumes that you already have Wine installed.</p>
+<h2>Install R for MS Windows 10</h2>
+<p>To install R for MS Windows in Wine, first configure Wine to use
+Windows 10;</p>
+<pre><code class="language-sh">$ winecfg
+</code></pre>
+<p>In the GUI, set ‘Windows version’ to ‘Windows 10’. Then, install <a href="https://cran.r-project.org/bin/windows/base/">R for
+Windows</a> in Wine, by:</p>
+<pre><code class="language-sh">$ wget https://cran.r-project.org/bin/windows/base/R-4.5.2-win.exe
+$ wine R-4.5.2-win.exe /SILENT
+</code></pre>
+<p>Finally, verify that R is available in Wine;</p>
+<pre><code class="language-sh">$ wine &quot;C:/Program Files/R/R-4.5.2/bin/x64/Rscript.exe&quot; --version
+...
+Rscript (R) version 4.5.2 (2025-10-31)
+</code></pre>
+<h1>Examples</h1>
+<h2>Example: Parallel workers running MS Windows via Wine</h2>
+<p>This example shows how to launch one worker running in Wine for Linux
+on the local machine.</p>
+<pre><code class="language-r">cl &lt;- makeClusterPSOCK(
+  1L,
+  rscript = c(
+    ## Silence Wine warnings
+    &quot;WINEDEBUG=fixme-all&quot;,
+    ## Don't pass LC_* and R_LIBS* environments from host to Wine
+    sprintf(&quot;%s=&quot;, grep(&quot;^(LC_|R_LIBS)&quot;, names(Sys.getenv()), value = TRUE)),
+    &quot;wine&quot;,
+    &quot;C:/Program Files/R/R-4.5.2/bin/x64/Rscript.exe&quot;
+  )
+)
+print(cl)
+#&gt; Socket cluster with 1 node on host 'localhost'
+#&gt; (R version 4.5.2 (2025-10-31 ucrt), platform x86_64-w64-mingw32)
+</code></pre>
+</body>
+</html>

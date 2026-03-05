@@ -1,0 +1,3 @@
+warp_boundary           Locate period boundaries for a date vector
+warp_change             Detect changes in a date time vector
+warp_distance           Compute distances from a date time origin

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head><title>R: Tidy Characterizations of Model Performance</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body><div class="container">
+<h1> Tidy Characterizations of Model Performance
+<img class="toplogo" src="../../../doc/html/Rlogo.svg" alt="[R logo]" />
+</h1>
+<hr/>
+<div style="text-align: center;">
+<a href="../../../doc/html/packages.html"><img class="arrow" src="../../../doc/html/left.jpg" alt="[Up]" /></a>
+<a href="../../../doc/html/index.html"><img class="arrow" src="../../../doc/html/up.jpg" alt="[Top]" /></a>
+</div><h2>Documentation for package &lsquo;yardstick&rsquo; version 1.3.2</h2>
+
+<ul><li><a href="../DESCRIPTION" type="text/plain; charset=utf-8">DESCRIPTION file</a>.</li>
+<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>
+<li><a href="../NEWS.md">Package NEWS</a>.</li>
+</ul>
+
+<h2>Help Pages</h2>
+
+
+<p style="text-align: center;">
+<a href="#A">A</a>
+<a href="#B">B</a>
+<a href="#C">C</a>
+<a href="#D">D</a>
+<a href="#E">E</a>
+<a href="#F">F</a>
+<a href="#G">G</a>
+<a href="#H">H</a>
+<a href="#I">I</a>
+<a href="#J">J</a>
+<a href="#K">K</a>
+<a href="#L">L</a>
+<a href="#M">M</a>
+<a href="#N">N</a>
+<a href="#P">P</a>
+<a href="#R">R</a>
+<a href="#S">S</a>
+<a href="#T">T</a>
+<a href="#V">V</a>
+<a href="#Y">Y</a>
+</p>
+
+
+<h2><a id="A">-- A --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="accuracy.html">accuracy</a></td>
+<td>Accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="accuracy.html">accuracy.data.frame</a></td>
+<td>Accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="accuracy.html">accuracy_vec</a></td>
+<td>Accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="average_precision.html">average_precision</a></td>
+<td>Area under the precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="average_precision.html">average_precision.data.frame</a></td>
+<td>Area under the precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="average_precision.html">average_precision_vec</a></td>
+<td>Area under the precision recall curve</td></tr>
+</table>
+
+<h2><a id="B">-- B --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="bal_accuracy.html">bal_accuracy</a></td>
+<td>Balanced accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="bal_accuracy.html">bal_accuracy.data.frame</a></td>
+<td>Balanced accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="bal_accuracy.html">bal_accuracy_vec</a></td>
+<td>Balanced accuracy</td></tr>
+<tr><td style="width: 25%;"><a href="brier_class.html">brier_class</a></td>
+<td>Brier score for classification models</td></tr>
+<tr><td style="width: 25%;"><a href="brier_class.html">brier_class.data.frame</a></td>
+<td>Brier score for classification models</td></tr>
+<tr><td style="width: 25%;"><a href="brier_class.html">brier_class_vec</a></td>
+<td>Brier score for classification models</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival.html">brier_survival</a></td>
+<td>Time-Dependent Brier score for right censored data</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival.html">brier_survival.data.frame</a></td>
+<td>Time-Dependent Brier score for right censored data</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival_integrated.html">brier_survival_integrated</a></td>
+<td>Integrated Brier score for right censored data</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival_integrated.html">brier_survival_integrated.data.frame</a></td>
+<td>Integrated Brier score for right censored data</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival_integrated.html">brier_survival_integrated_vec</a></td>
+<td>Integrated Brier score for right censored data</td></tr>
+<tr><td style="width: 25%;"><a href="brier_survival.html">brier_survival_vec</a></td>
+<td>Time-Dependent Brier score for right censored data</td></tr>
+</table>
+
+<h2><a id="C">-- C --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="ccc.html">ccc</a></td>
+<td>Concordance correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="ccc.html">ccc.data.frame</a></td>
+<td>Concordance correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="ccc.html">ccc_vec</a></td>
+<td>Concordance correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_class_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_dynamic_survival_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_numeric_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_prob_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="check_metric.html">check_static_survival_metric</a></td>
+<td>Developer function for checking inputs in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="classification_cost.html">classification_cost</a></td>
+<td>Costs function for poor classification</td></tr>
+<tr><td style="width: 25%;"><a href="classification_cost.html">classification_cost.data.frame</a></td>
+<td>Costs function for poor classification</td></tr>
+<tr><td style="width: 25%;"><a href="classification_cost.html">classification_cost_vec</a></td>
+<td>Costs function for poor classification</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">class_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="concordance_survival.html">concordance_survival</a></td>
+<td>Concordance index for right-censored data</td></tr>
+<tr><td style="width: 25%;"><a href="concordance_survival.html">concordance_survival.data.frame</a></td>
+<td>Concordance index for right-censored data</td></tr>
+<tr><td style="width: 25%;"><a href="concordance_survival.html">concordance_survival_vec</a></td>
+<td>Concordance index for right-censored data</td></tr>
+<tr><td style="width: 25%;"><a href="conf_mat.html">conf_mat</a></td>
+<td>Confusion Matrix for Categorical Data</td></tr>
+<tr><td style="width: 25%;"><a href="conf_mat.html">conf_mat.data.frame</a></td>
+<td>Confusion Matrix for Categorical Data</td></tr>
+<tr><td style="width: 25%;"><a href="conf_mat.html">conf_mat.default</a></td>
+<td>Confusion Matrix for Categorical Data</td></tr>
+<tr><td style="width: 25%;"><a href="conf_mat.html">conf_mat.table</a></td>
+<td>Confusion Matrix for Categorical Data</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">curve_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">curve_survival_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+</table>
+
+<h2><a id="D">-- D --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="demographic_parity.html">demographic_parity</a></td>
+<td>Demographic parity</td></tr>
+<tr><td style="width: 25%;"><a href="detection_prevalence.html">detection_prevalence</a></td>
+<td>Detection prevalence</td></tr>
+<tr><td style="width: 25%;"><a href="detection_prevalence.html">detection_prevalence.data.frame</a></td>
+<td>Detection prevalence</td></tr>
+<tr><td style="width: 25%;"><a href="detection_prevalence.html">detection_prevalence_vec</a></td>
+<td>Detection prevalence</td></tr>
+<tr><td style="width: 25%;"><a href="developer-helpers.html">developer-helpers</a></td>
+<td>Developer helpers</td></tr>
+<tr><td style="width: 25%;"><a href="developer-helpers.html">dots_to_estimate</a></td>
+<td>Developer helpers</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">dynamic_survival_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+</table>
+
+<h2><a id="E">-- E --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="equalized_odds.html">equalized_odds</a></td>
+<td>Equalized odds</td></tr>
+<tr><td style="width: 25%;"><a href="equal_opportunity.html">equal_opportunity</a></td>
+<td>Equal opportunity</td></tr>
+</table>
+
+<h2><a id="F">-- F --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="developer-helpers.html">finalize_estimator</a></td>
+<td>Developer helpers</td></tr>
+<tr><td style="width: 25%;"><a href="developer-helpers.html">finalize_estimator_internal</a></td>
+<td>Developer helpers</td></tr>
+<tr><td style="width: 25%;"><a href="f_meas.html">f_meas</a></td>
+<td>F Measure</td></tr>
+<tr><td style="width: 25%;"><a href="f_meas.html">f_meas.data.frame</a></td>
+<td>F Measure</td></tr>
+<tr><td style="width: 25%;"><a href="f_meas.html">f_meas_vec</a></td>
+<td>F Measure</td></tr>
+</table>
+
+<h2><a id="G">-- G --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="gain_capture.html">gain_capture</a></td>
+<td>Gain capture</td></tr>
+<tr><td style="width: 25%;"><a href="gain_capture.html">gain_capture.data.frame</a></td>
+<td>Gain capture</td></tr>
+<tr><td style="width: 25%;"><a href="gain_capture.html">gain_capture_vec</a></td>
+<td>Gain capture</td></tr>
+<tr><td style="width: 25%;"><a href="gain_curve.html">gain_curve</a></td>
+<td>Gain curve</td></tr>
+<tr><td style="width: 25%;"><a href="gain_curve.html">gain_curve.data.frame</a></td>
+<td>Gain curve</td></tr>
+<tr><td style="width: 25%;"><a href="developer-helpers.html">get_weights</a></td>
+<td>Developer helpers</td></tr>
+</table>
+
+<h2><a id="H">-- H --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="hpc_cv.html">hpc_cv</a></td>
+<td>Multiclass Probability Predictions</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss.html">huber_loss</a></td>
+<td>Huber loss</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss.html">huber_loss.data.frame</a></td>
+<td>Huber loss</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss_pseudo.html">huber_loss_pseudo</a></td>
+<td>Psuedo-Huber Loss</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss_pseudo.html">huber_loss_pseudo.data.frame</a></td>
+<td>Psuedo-Huber Loss</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss_pseudo.html">huber_loss_pseudo_vec</a></td>
+<td>Psuedo-Huber Loss</td></tr>
+<tr><td style="width: 25%;"><a href="huber_loss.html">huber_loss_vec</a></td>
+<td>Huber loss</td></tr>
+</table>
+
+<h2><a id="I">-- I --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="iic.html">iic</a></td>
+<td>Index of ideality of correlation</td></tr>
+<tr><td style="width: 25%;"><a href="iic.html">iic.data.frame</a></td>
+<td>Index of ideality of correlation</td></tr>
+<tr><td style="width: 25%;"><a href="iic.html">iic_vec</a></td>
+<td>Index of ideality of correlation</td></tr>
+</table>
+
+<h2><a id="J">-- J --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="j_index.html">j_index</a></td>
+<td>J-index</td></tr>
+<tr><td style="width: 25%;"><a href="j_index.html">j_index.data.frame</a></td>
+<td>J-index</td></tr>
+<tr><td style="width: 25%;"><a href="j_index.html">j_index_vec</a></td>
+<td>J-index</td></tr>
+</table>
+
+<h2><a id="K">-- K --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="kap.html">kap</a></td>
+<td>Kappa</td></tr>
+<tr><td style="width: 25%;"><a href="kap.html">kap.data.frame</a></td>
+<td>Kappa</td></tr>
+<tr><td style="width: 25%;"><a href="kap.html">kap_vec</a></td>
+<td>Kappa</td></tr>
+</table>
+
+<h2><a id="L">-- L --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="lift_curve.html">lift_curve</a></td>
+<td>Lift curve</td></tr>
+<tr><td style="width: 25%;"><a href="lift_curve.html">lift_curve.data.frame</a></td>
+<td>Lift curve</td></tr>
+<tr><td style="width: 25%;"><a href="lung_surv.html">lung_surv</a></td>
+<td>Survival Analysis Results</td></tr>
+</table>
+
+<h2><a id="M">-- M --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="mae.html">mae</a></td>
+<td>Mean absolute error</td></tr>
+<tr><td style="width: 25%;"><a href="mae.html">mae.data.frame</a></td>
+<td>Mean absolute error</td></tr>
+<tr><td style="width: 25%;"><a href="mae.html">mae_vec</a></td>
+<td>Mean absolute error</td></tr>
+<tr><td style="width: 25%;"><a href="mape.html">mape</a></td>
+<td>Mean absolute percent error</td></tr>
+<tr><td style="width: 25%;"><a href="mape.html">mape.data.frame</a></td>
+<td>Mean absolute percent error</td></tr>
+<tr><td style="width: 25%;"><a href="mape.html">mape_vec</a></td>
+<td>Mean absolute percent error</td></tr>
+<tr><td style="width: 25%;"><a href="mase.html">mase</a></td>
+<td>Mean absolute scaled error</td></tr>
+<tr><td style="width: 25%;"><a href="mase.html">mase.data.frame</a></td>
+<td>Mean absolute scaled error</td></tr>
+<tr><td style="width: 25%;"><a href="mase.html">mase_vec</a></td>
+<td>Mean absolute scaled error</td></tr>
+<tr><td style="width: 25%;"><a href="mcc.html">mcc</a></td>
+<td>Matthews correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="mcc.html">mcc.data.frame</a></td>
+<td>Matthews correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="mcc.html">mcc_vec</a></td>
+<td>Matthews correlation coefficient</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">metric-summarizers</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="metrics.html">metrics</a></td>
+<td>General Function to Estimate Performance</td></tr>
+<tr><td style="width: 25%;"><a href="metrics.html">metrics.data.frame</a></td>
+<td>General Function to Estimate Performance</td></tr>
+<tr><td style="width: 25%;"><a href="metric_set.html">metric_set</a></td>
+<td>Combine metric functions</td></tr>
+<tr><td style="width: 25%;"><a href="metric_tweak.html">metric_tweak</a></td>
+<td>Tweak a metric function</td></tr>
+<tr><td style="width: 25%;"><a href="mn_log_loss.html">mn_log_loss</a></td>
+<td>Mean log loss for multinomial data</td></tr>
+<tr><td style="width: 25%;"><a href="mn_log_loss.html">mn_log_loss.data.frame</a></td>
+<td>Mean log loss for multinomial data</td></tr>
+<tr><td style="width: 25%;"><a href="mn_log_loss.html">mn_log_loss_vec</a></td>
+<td>Mean log loss for multinomial data</td></tr>
+<tr><td style="width: 25%;"><a href="mpe.html">mpe</a></td>
+<td>Mean percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="mpe.html">mpe.data.frame</a></td>
+<td>Mean percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="mpe.html">mpe_vec</a></td>
+<td>Mean percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="msd.html">msd</a></td>
+<td>Mean signed deviation</td></tr>
+<tr><td style="width: 25%;"><a href="msd.html">msd.data.frame</a></td>
+<td>Mean signed deviation</td></tr>
+<tr><td style="width: 25%;"><a href="msd.html">msd_vec</a></td>
+<td>Mean signed deviation</td></tr>
+</table>
+
+<h2><a id="N">-- N --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="new-metric.html">new-metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_class_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_dynamic_survival_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new_groupwise_metric.html">new_groupwise_metric</a></td>
+<td>Create groupwise metrics</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_integrated_survival_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_numeric_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_prob_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="new-metric.html">new_static_survival_metric</a></td>
+<td>Construct a new metric function</td></tr>
+<tr><td style="width: 25%;"><a href="npv.html">npv</a></td>
+<td>Negative predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="npv.html">npv.data.frame</a></td>
+<td>Negative predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="npv.html">npv_vec</a></td>
+<td>Negative predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">numeric_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+</table>
+
+<h2><a id="P">-- P --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="pathology.html">pathology</a></td>
+<td>Liver Pathology Data</td></tr>
+<tr><td style="width: 25%;"><a href="poisson_log_loss.html">poisson_log_loss</a></td>
+<td>Mean log loss for Poisson data</td></tr>
+<tr><td style="width: 25%;"><a href="poisson_log_loss.html">poisson_log_loss.data.frame</a></td>
+<td>Mean log loss for Poisson data</td></tr>
+<tr><td style="width: 25%;"><a href="poisson_log_loss.html">poisson_log_loss_vec</a></td>
+<td>Mean log loss for Poisson data</td></tr>
+<tr><td style="width: 25%;"><a href="ppv.html">ppv</a></td>
+<td>Positive predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="ppv.html">ppv.data.frame</a></td>
+<td>Positive predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="ppv.html">ppv_vec</a></td>
+<td>Positive predictive value</td></tr>
+<tr><td style="width: 25%;"><a href="precision.html">precision</a></td>
+<td>Precision</td></tr>
+<tr><td style="width: 25%;"><a href="precision.html">precision.data.frame</a></td>
+<td>Precision</td></tr>
+<tr><td style="width: 25%;"><a href="precision.html">precision_vec</a></td>
+<td>Precision</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">prob_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="pr_auc.html">pr_auc</a></td>
+<td>Area under the precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="pr_auc.html">pr_auc.data.frame</a></td>
+<td>Area under the precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="pr_auc.html">pr_auc_vec</a></td>
+<td>Area under the precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="pr_curve.html">pr_curve</a></td>
+<td>Precision recall curve</td></tr>
+<tr><td style="width: 25%;"><a href="pr_curve.html">pr_curve.data.frame</a></td>
+<td>Precision recall curve</td></tr>
+</table>
+
+<h2><a id="R">-- R --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="recall.html">recall</a></td>
+<td>Recall</td></tr>
+<tr><td style="width: 25%;"><a href="recall.html">recall.data.frame</a></td>
+<td>Recall</td></tr>
+<tr><td style="width: 25%;"><a href="recall.html">recall_vec</a></td>
+<td>Recall</td></tr>
+<tr><td style="width: 25%;"><a href="rmse.html">rmse</a></td>
+<td>Root mean squared error</td></tr>
+<tr><td style="width: 25%;"><a href="rmse.html">rmse.data.frame</a></td>
+<td>Root mean squared error</td></tr>
+<tr><td style="width: 25%;"><a href="rmse.html">rmse_vec</a></td>
+<td>Root mean squared error</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc.html">roc_auc</a></td>
+<td>Area under the receiver operator curve</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc.html">roc_auc.data.frame</a></td>
+<td>Area under the receiver operator curve</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc_survival.html">roc_auc_survival</a></td>
+<td>Time-Dependent ROC AUC for Censored Data</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc_survival.html">roc_auc_survival.data.frame</a></td>
+<td>Time-Dependent ROC AUC for Censored Data</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc_survival.html">roc_auc_survival_vec</a></td>
+<td>Time-Dependent ROC AUC for Censored Data</td></tr>
+<tr><td style="width: 25%;"><a href="roc_auc.html">roc_auc_vec</a></td>
+<td>Area under the receiver operator curve</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunp.html">roc_aunp</a></td>
+<td>Area under the ROC curve of each class against the rest, using the a priori class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunp.html">roc_aunp.data.frame</a></td>
+<td>Area under the ROC curve of each class against the rest, using the a priori class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunp.html">roc_aunp_vec</a></td>
+<td>Area under the ROC curve of each class against the rest, using the a priori class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunu.html">roc_aunu</a></td>
+<td>Area under the ROC curve of each class against the rest, using the uniform class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunu.html">roc_aunu.data.frame</a></td>
+<td>Area under the ROC curve of each class against the rest, using the uniform class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_aunu.html">roc_aunu_vec</a></td>
+<td>Area under the ROC curve of each class against the rest, using the uniform class distribution</td></tr>
+<tr><td style="width: 25%;"><a href="roc_curve.html">roc_curve</a></td>
+<td>Receiver operator curve</td></tr>
+<tr><td style="width: 25%;"><a href="roc_curve.html">roc_curve.data.frame</a></td>
+<td>Receiver operator curve</td></tr>
+<tr><td style="width: 25%;"><a href="roc_curve_survival.html">roc_curve_survival</a></td>
+<td>Time-Dependent ROC surve for Censored Data</td></tr>
+<tr><td style="width: 25%;"><a href="roc_curve_survival.html">roc_curve_survival.data.frame</a></td>
+<td>Time-Dependent ROC surve for Censored Data</td></tr>
+<tr><td style="width: 25%;"><a href="rpd.html">rpd</a></td>
+<td>Ratio of performance to deviation</td></tr>
+<tr><td style="width: 25%;"><a href="rpd.html">rpd.data.frame</a></td>
+<td>Ratio of performance to deviation</td></tr>
+<tr><td style="width: 25%;"><a href="rpd.html">rpd_vec</a></td>
+<td>Ratio of performance to deviation</td></tr>
+<tr><td style="width: 25%;"><a href="rpiq.html">rpiq</a></td>
+<td>Ratio of performance to inter-quartile</td></tr>
+<tr><td style="width: 25%;"><a href="rpiq.html">rpiq.data.frame</a></td>
+<td>Ratio of performance to inter-quartile</td></tr>
+<tr><td style="width: 25%;"><a href="rpiq.html">rpiq_vec</a></td>
+<td>Ratio of performance to inter-quartile</td></tr>
+<tr><td style="width: 25%;"><a href="rsq.html">rsq</a></td>
+<td>R squared</td></tr>
+<tr><td style="width: 25%;"><a href="rsq.html">rsq.data.frame</a></td>
+<td>R squared</td></tr>
+<tr><td style="width: 25%;"><a href="rsq_trad.html">rsq_trad</a></td>
+<td>R squared - traditional</td></tr>
+<tr><td style="width: 25%;"><a href="rsq_trad.html">rsq_trad.data.frame</a></td>
+<td>R squared - traditional</td></tr>
+<tr><td style="width: 25%;"><a href="rsq_trad.html">rsq_trad_vec</a></td>
+<td>R squared - traditional</td></tr>
+<tr><td style="width: 25%;"><a href="rsq.html">rsq_vec</a></td>
+<td>R squared</td></tr>
+</table>
+
+<h2><a id="S">-- S --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="sens.html">sens</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="sens.html">sens.data.frame</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="sens.html">sensitivity</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="sens.html">sensitivity.data.frame</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="sens.html">sensitivity_vec</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="sens.html">sens_vec</a></td>
+<td>Sensitivity</td></tr>
+<tr><td style="width: 25%;"><a href="smape.html">smape</a></td>
+<td>Symmetric mean absolute percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="smape.html">smape.data.frame</a></td>
+<td>Symmetric mean absolute percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="smape.html">smape_vec</a></td>
+<td>Symmetric mean absolute percentage error</td></tr>
+<tr><td style="width: 25%;"><a href="solubility_test.html">solubility_test</a></td>
+<td>Solubility Predictions from MARS Model</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">spec</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">spec.data.frame</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">specificity</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">specificity.data.frame</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">specificity_vec</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="spec.html">spec_vec</a></td>
+<td>Specificity</td></tr>
+<tr><td style="width: 25%;"><a href="metric-summarizers.html">static_survival_metric_summarizer</a></td>
+<td>Developer function for summarizing new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="summary.conf_mat.html">summary.conf_mat</a></td>
+<td>Summary Statistics for Confusion Matrices</td></tr>
+</table>
+
+<h2><a id="T">-- T --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="conf_mat.html">tidy.conf_mat</a></td>
+<td>Confusion Matrix for Categorical Data</td></tr>
+<tr><td style="width: 25%;"><a href="two_class_example.html">two_class_example</a></td>
+<td>Two Class Predictions</td></tr>
+</table>
+
+<h2><a id="V">-- V --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="developer-helpers.html">validate_estimator</a></td>
+<td>Developer helpers</td></tr>
+</table>
+
+<h2><a id="Y">-- Y --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="yardstick_remove_missing.html">yardstick_any_missing</a></td>
+<td>Developer function for handling missing values in new metrics</td></tr>
+<tr><td style="width: 25%;"><a href="yardstick_remove_missing.html">yardstick_remove_missing</a></td>
+<td>Developer function for handling missing values in new metrics</td></tr>
+</table>
+</div></body></html>

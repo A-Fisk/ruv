@@ -1,0 +1,20 @@
+Package: DiceDesign
+Type: Package
+Title: Designs of Computer Experiments
+Version: 1.10
+Date: 2023-11-30
+Author: Jessica Franco, Delphine Dupuy, Olivier Roustant, 
+        Patrice Kiener, Guillaume Damblin and Bertrand Iooss.
+Maintainer: Celine Helbert <Celine.Helbert@ec-lyon.fr>
+Description: Space-Filling Designs and space-filling criteria (distance-based and uniformity-based), with emphasis to computer experiments; <doi:10.18637/jss.v065.i11>.
+License: GPL-3
+Depends: R (>= 2.10)
+Suggests: rgl, randtoolbox, lattice
+Encoding: UTF-8
+NeedsCompilation: yes
+LazyData: true
+Packaged: 2023-12-07 08:35:30 UTC; chelbert
+Repository: CRAN
+Date/Publication: 2023-12-07 12:00:10 UTC
+Built: R 4.5.0; aarch64-apple-darwin20; 2025-03-31 22:04:31 UTC; unix
+Archs: DiceDesign.so.dSYM
