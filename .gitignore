@@ -1,8 +1,9 @@
 # Rust
 /target
 
-# Downloaded package library
+# Downloaded package libraries
 /arrrv_lib
+/.arrrv
 
 # Force-include Cargo.lock (overrides global *.lock rule)
 !Cargo.lock
