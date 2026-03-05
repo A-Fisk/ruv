@@ -1,0 +1,116 @@
+use flate2::read::GzDecoder;
+use std::collections::HashMap;
+use std::io::Read;
+
+pub struct Package {
+    pub version: String,
+    pub deps: Vec<String>,
+}
+
+pub fn parse_packages(text: &str) -> HashMap<String, Package> {
+    let mut index = HashMap::new();
+
+    for block in text.split("\n\n") {
+        // join continuation lines back onto the previous line
+        let joined = block
+            .lines()
+            .fold(String::new(), |mut acc, line| {
+                if line.starts_with(' ') {
+                    acc.push(' ');
+                    acc.push_str(line.trim());
+                } else {
+                    if !acc.is_empty() { acc.push('\n'); }
+                    acc.push_str(line)
+                }
+                acc
+            });
+
+        let mut name = None;
+        let mut version = None;
+        let mut deps: Vec<String> = Vec::new();
+
+        for line in joined.lines() {
+            if let Some((key, val)) = line.split_once(": ") {
+                match key {
+                    "Package" => name = Some(val.to_string()),
+                    "Version" => version = Some(val.to_string()),
+                    "Imports" | "Depends" => {
+                        for dep in val.split(',') {
+                            let dep_name = dep
+                                .trim()
+                                .split_once(' ')
+                                .map(|(n, _)| n)
+                                .unwrap_or(dep.trim())
+                                .to_string();
+                            let base_packages = [
+                                "R", "base", "utils", "stats", "graphics", "grDevices",
+                                "methods", "datasets", "tools", "grid", "compiler",
+                            ];
+                            if !base_packages.contains(&dep_name.as_str()) && !dep_name.is_empty() {
+                                deps.push(dep_name);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if let (Some(name), Some(version)) = (name, version) {
+            index.insert(name, Package { version, deps });
+        }
+    }
+
+    index
+}
+
+pub fn fetch_cran_index() -> HashMap<String, Package> {
+    println!("fetching CRAN package index...");
+    let response = reqwest::blocking::get("https://cloud.r-project.org/src/contrib/PACKAGES.gz").unwrap();
+    let bytes = response.bytes().unwrap();
+    let mut decoder = GzDecoder::new(&bytes[..]);
+    let mut text = String::new();
+    decoder.read_to_string(&mut text).unwrap();
+    parse_packages(&text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_single_package() {
+        let text = "Package: ggplot2\nVersion: 3.5.1\nImports: rlang, scales\n";
+        let index = parse_packages(text);
+        let pkg = index.get("ggplot2").unwrap();
+        assert_eq!(pkg.version, "3.5.1");
+        assert!(pkg.deps.contains(&"rlang".to_string()));
+        assert!(pkg.deps.contains(&"scales".to_string()));
+    }
+
+    #[test]
+    fn test_parse_strips_version_constraints() {
+        let text = "Package: foo\nVersion: 1.0\nImports: rlang (>= 1.1.0)\n";
+        let index = parse_packages(text);
+        let pkg = index.get("foo").unwrap();
+        assert_eq!(pkg.deps, vec!["rlang"]);
+    }
+
+    #[test]
+    fn test_parse_filters_base_packages() {
+        let text = "Package: foo\nVersion: 1.0\nDepends: R (>= 4.0), methods, rlang\n";
+        let index = parse_packages(text);
+        let pkg = index.get("foo").unwrap();
+        assert!(!pkg.deps.contains(&"R".to_string()));
+        assert!(!pkg.deps.contains(&"methods".to_string()));
+        assert!(pkg.deps.contains(&"rlang".to_string()));
+    }
+
+    #[test]
+    fn test_parse_multiple_packages() {
+        let text = "Package: foo\nVersion: 1.0\nImports: bar\n\nPackage: bar\nVersion: 2.0\n";
+        let index = parse_packages(text);
+        assert!(index.contains_key("foo"));
+        assert!(index.contains_key("bar"));
+    }
+}
