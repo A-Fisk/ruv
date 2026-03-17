@@ -346,6 +346,7 @@ fn extract_r_pkg(_pkg_path: &Path, _dest_dir: &Path) -> Result<(), String> {
 
 /// Find the R framework Payload file inside an expanded .pkg directory.
 /// Looks for a subdirectory matching `*-fw.pkg` or `R-fw.pkg`.
+#[cfg(target_os = "macos")]
 fn find_fw_payload(expand_dir: &Path) -> Result<PathBuf, String> {
     let entries = std::fs::read_dir(expand_dir)
         .map_err(|e| format!("failed to read expanded pkg dir: {}", e))?;
