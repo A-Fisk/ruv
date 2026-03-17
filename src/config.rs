@@ -16,6 +16,8 @@ pub struct ProjectConfig {
     pub name: String,
     #[allow(dead_code)]
     pub version: String,
+    #[serde(rename = "r-version")]
+    pub r_version: Option<String>,
     pub dependencies: Vec<String>,
 }
 
