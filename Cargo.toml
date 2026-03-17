@@ -26,7 +26,8 @@ tempfile = "3.26.0"
 targets = [
     "aarch64-apple-darwin",   # macOS ARM (M1/M2/M3/etc)
     "x86_64-apple-darwin",    # macOS Intel
-    "x86_64-unknown-linux-musl" # Linux x86_64 (static, no glibc dependency)
+    "x86_64-unknown-linux-musl",  # Linux x86_64 (static, no glibc dependency)
+    "aarch64-unknown-linux-musl"  # Linux ARM64 (Graviton, Raspberry Pi, etc)
 ]
 # Installer to generate (shell script for curl | sh)
 installers = ["shell"]

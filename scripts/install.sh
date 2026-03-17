@@ -36,8 +36,11 @@ case "$(uname -s)" in
       x86_64)
         TARGET="x86_64-unknown-linux-musl"
         ;;
+      aarch64)
+        TARGET="aarch64-unknown-linux-musl"
+        ;;
       *)
-        echo "Error: Linux only supports x86_64. Found: $(uname -m)"
+        echo "Error: Unsupported Linux architecture: $(uname -m)"
         exit 1
         ;;
     esac
