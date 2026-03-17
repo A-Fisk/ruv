@@ -210,6 +210,7 @@ fn r_managed_dir() -> PathBuf {
         .join("r")
 }
 
+#[cfg(target_os = "macos")]
 fn cran_arch() -> &'static str {
     match std::env::consts::ARCH {
         "aarch64" => "big-sur-arm64",
@@ -217,6 +218,7 @@ fn cran_arch() -> &'static str {
     }
 }
 
+#[cfg(target_os = "macos")]
 fn cran_arch_suffix() -> &'static str {
     match std::env::consts::ARCH {
         "aarch64" => "arm64",
@@ -224,8 +226,18 @@ fn cran_arch_suffix() -> &'static str {
     }
 }
 
-/// Fetch available R versions for this platform from the CRAN directory listing.
+/// Fetch available R versions for this platform.
 fn fetch_available_r_versions() -> Result<Vec<RVersion>, String> {
+    #[cfg(target_os = "macos")]
+    return fetch_available_r_versions_macos();
+    #[cfg(target_os = "linux")]
+    return fetch_available_r_versions_linux();
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    Err("automatic R installation is not supported on this platform".to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn fetch_available_r_versions_macos() -> Result<Vec<RVersion>, String> {
     let url = format!(
         "https://cran.r-project.org/bin/macosx/{}/base/",
         cran_arch()
@@ -240,6 +252,78 @@ fn fetch_available_r_versions() -> Result<Vec<RVersion>, String> {
     } else {
         Ok(versions)
     }
+}
+
+/// Read /etc/os-release and return the Posit CDN distro string, e.g. "ubuntu-2204".
+#[cfg(target_os = "linux")]
+fn linux_posit_distro() -> String {
+    let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+    let mut id = String::new();
+    let mut version_id = String::new();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("ID=") {
+            id = v.trim_matches('"').to_lowercase();
+        } else if let Some(v) = line.strip_prefix("VERSION_ID=") {
+            version_id = v.trim_matches('"').replace('.', "");
+        }
+    }
+    match id.as_str() {
+        "ubuntu" | "debian" if !version_id.is_empty() => format!("{}-{}", id, version_id),
+        _ => {
+            eprintln!(
+                "warning: unrecognised Linux distro ({} {}), defaulting to ubuntu-2204 for Posit CDN",
+                id, version_id
+            );
+            "ubuntu-2204".to_string()
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_posit_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        _ => "amd64",
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn fetch_available_r_versions_linux() -> Result<Vec<RVersion>, String> {
+    let distro = linux_posit_distro();
+    let arch = linux_posit_arch();
+    let url = format!("https://cdn.posit.co/r/{}/pkgs/", distro);
+    let body = reqwest::blocking::get(&url)
+        .map_err(|e| format!("failed to fetch Posit R version list: {}", e))?
+        .text()
+        .map_err(|e| format!("failed to read Posit R version list: {}", e))?;
+    let versions = parse_posit_deb_listing(&body, arch);
+    if versions.is_empty() {
+        Err(format!(
+            "no R versions found for {} on Posit CDN ({})",
+            distro, url
+        ))
+    } else {
+        Ok(versions)
+    }
+}
+
+/// Parse Posit CDN directory listing HTML for .deb filenames, e.g. `r-4.3.2_1_amd64.deb`.
+#[cfg(target_os = "linux")]
+fn parse_posit_deb_listing(html: &str, arch: &str) -> Vec<RVersion> {
+    let suffix = format!("_1_{}.deb", arch);
+    let mut versions = Vec::new();
+    for part in html.split("r-") {
+        let Some(end) = part.find(suffix.as_str()) else {
+            continue;
+        };
+        let version_str = &part[..end];
+        if let Some(v) = RVersion::parse(version_str) {
+            versions.push(v);
+        }
+    }
+    versions.sort_by(|a, b| b.cmp(a));
+    versions.dedup_by(|a, b| a == b);
+    versions
 }
 
 /// Parse CRAN directory listing HTML for .pkg filenames, e.g. `R-4.3.2-arm64.pkg`.
@@ -279,6 +363,7 @@ fn resolve_version_to_download(
 }
 
 /// Download the R .pkg for `version` to a temp file, with a progress bar.
+#[cfg(target_os = "macos")]
 fn download_r_pkg(version: &RVersion) -> Result<PathBuf, String> {
     let url = format!(
         "https://cran.r-project.org/bin/macosx/{}/base/R-{}-{}.pkg",
@@ -362,9 +447,126 @@ fn extract_r_pkg(pkg_path: &Path, dest_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(target_os = "macos"))]
-fn extract_r_pkg(_pkg_path: &Path, _dest_dir: &Path) -> Result<(), String> {
-    Err("automatic R installation is only supported on macOS currently".to_string())
+/// Download the R .deb for `version` to a temp file, with a progress bar.
+#[cfg(target_os = "linux")]
+fn download_r_deb(version: &RVersion) -> Result<PathBuf, String> {
+    let distro = linux_posit_distro();
+    let arch = linux_posit_arch();
+    let url = format!(
+        "https://cdn.posit.co/r/{}/pkgs/r-{}_1_{}.deb",
+        distro, version, arch
+    );
+
+    let response = reqwest::blocking::get(&url)
+        .map_err(|e| format!("failed to download R {}: {}", version, e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "failed to download R {} (HTTP {})\n       URL: {}",
+            version,
+            response.status(),
+            url
+        ));
+    }
+
+    let total = response.content_length().unwrap_or(0);
+    let pb = ProgressBar::new(total);
+    pb.set_style(
+        ProgressStyle::with_template(
+            "  Downloading R {msg} [{wide_bar:.green/dim}] {bytes:>10}/{total_bytes:<10}",
+        )
+        .unwrap()
+        .progress_chars("━━╌"),
+    );
+    pb.set_message(version.to_string());
+
+    let mut src = pb.wrap_read(response);
+    let mut bytes = Vec::new();
+    src.read_to_end(&mut bytes)
+        .map_err(|e| format!("failed to read R download: {}", e))?;
+    pb.finish_and_clear();
+
+    let tmp = std::env::temp_dir().join(format!("ruv-R-{}-{}.deb", version, arch));
+    std::fs::write(&tmp, &bytes).map_err(|e| format!("failed to write R deb to temp: {}", e))?;
+    Ok(tmp)
+}
+
+/// Extract a Posit .deb into `dest_dir` using `ar` + `tar`.
+/// Requires `binutils` (provides `ar`) — present on all standard Linux distros.
+#[cfg(target_os = "linux")]
+fn extract_r_deb(deb_path: &Path, dest_dir: &Path) -> Result<(), String> {
+    let work_dir = std::env::temp_dir().join(format!("ruv-deb-{}", std::process::id()));
+    std::fs::create_dir_all(&work_dir).map_err(|e| format!("failed to create temp dir: {}", e))?;
+
+    // Step 1: ar x file.deb — extracts debian-binary, control.tar.*, data.tar.*
+    let status = std::process::Command::new("ar")
+        .args(["x", &deb_path.to_string_lossy()])
+        .current_dir(&work_dir)
+        .status()
+        .map_err(|e| format!("failed to run ar (is binutils installed?): {}", e))?;
+    if !status.success() {
+        return Err("ar extraction of .deb failed".to_string());
+    }
+
+    // Step 2: find data.tar.* (xz, gz, or zst depending on distro)
+    let data_tar = find_deb_data_tar(&work_dir)?;
+
+    // Step 3: extract data tarball into dest_dir
+    let status = std::process::Command::new("tar")
+        .args([
+            "xf",
+            &data_tar.to_string_lossy(),
+            "-C",
+            &dest_dir.to_string_lossy(),
+        ])
+        .status()
+        .map_err(|e| format!("failed to run tar: {}", e))?;
+    if !status.success() {
+        return Err("tar extraction of R deb data failed".to_string());
+    }
+
+    let _ = std::fs::remove_dir_all(&work_dir);
+    Ok(())
+}
+
+/// Find data.tar.* inside an extracted .deb working directory.
+#[cfg(target_os = "linux")]
+fn find_deb_data_tar(work_dir: &Path) -> Result<PathBuf, String> {
+    for name in &["data.tar.xz", "data.tar.gz", "data.tar.zst"] {
+        let p = work_dir.join(name);
+        if p.exists() {
+            return Ok(p);
+        }
+    }
+    Err(format!(
+        "could not find data.tar.* in extracted .deb at {}",
+        work_dir.display()
+    ))
+}
+
+/// Download and extract R for the current platform into `install_dir`.
+fn download_and_extract_r(version: &RVersion, install_dir: &Path) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let pkg_path = download_r_pkg(version)?;
+        println!("  Installing R {}...", version);
+        extract_r_pkg(&pkg_path, install_dir)?;
+        let _ = std::fs::remove_file(&pkg_path);
+        Ok(())
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let deb_path = download_r_deb(version)?;
+        println!("  Installing R {}...", version);
+        extract_r_deb(&deb_path, install_dir)?;
+        let _ = std::fs::remove_file(&deb_path);
+        Ok(())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        let _ = (version, install_dir);
+        Err("automatic R installation is not supported on this platform".to_string())
+    }
 }
 
 /// Find the R framework Payload file inside an expanded .pkg directory.
@@ -430,10 +632,7 @@ pub fn auto_install_r(constraint: &str) -> Result<RInstallation, String> {
     std::fs::create_dir_all(&install_dir)
         .map_err(|e| format!("failed to create R install dir: {}", e))?;
 
-    let pkg_path = download_r_pkg(&version)?;
-    println!("  Installing R {}...", version);
-    extract_r_pkg(&pkg_path, &install_dir)?;
-    let _ = std::fs::remove_file(&pkg_path);
+    download_and_extract_r(&version, &install_dir)?;
 
     // Find the R binary inside the extracted framework and create a stable bin/ symlink
     let r_bin_dir = find_r_bin_in_dir(&install_dir).ok_or_else(|| {
@@ -670,6 +869,19 @@ mod tests {
             .collect();
         let v = resolve_version_to_download(">=4.4", &available).unwrap();
         assert_eq!(v.to_string(), "4.5.1"); // highest satisfying >=4.4
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_parse_posit_deb_listing_amd64() {
+        let html = r#"
+            <a href="r-4.3.2_1_amd64.deb">r-4.3.2_1_amd64.deb</a>
+            <a href="r-4.4.0_1_amd64.deb">r-4.4.0_1_amd64.deb</a>
+            <a href="r-4.5.1_1_amd64.deb">r-4.5.1_1_amd64.deb</a>
+        "#;
+        let versions = parse_posit_deb_listing(html, "amd64");
+        let strs: Vec<String> = versions.iter().map(|v| v.to_string()).collect();
+        assert_eq!(strs, vec!["4.5.1", "4.4.0", "4.3.2"]);
     }
 
     #[test]
