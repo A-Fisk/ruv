@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 REPO="A-Fisk/ruv"
@@ -34,10 +34,13 @@ case "$(uname -s)" in
   Linux)
     case "$(uname -m)" in
       x86_64)
-        TARGET="x86_64-unknown-linux-gnu"
+        TARGET="x86_64-unknown-linux-musl"
+        ;;
+      aarch64)
+        TARGET="aarch64-unknown-linux-musl"
         ;;
       *)
-        echo "Error: Linux only supports x86_64. Found: $(uname -m)"
+        echo "Error: Unsupported Linux architecture: $(uname -m)"
         exit 1
         ;;
     esac
@@ -79,23 +82,26 @@ cp "$BINARY_PATH" "$INSTALL_DIR/ruv"
 chmod +x "$INSTALL_DIR/ruv"
 
 echo ""
-echo "✓ ruv $TAG installed successfully!"
+echo "ruv $TAG installed successfully!"
 echo ""
 
 echo "Binary location: $INSTALL_DIR/ruv"
 echo ""
 
-# Check if install dir is in PATH
-if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
-  echo "✓ $INSTALL_DIR is already in your \$PATH"
-  echo ""
-  echo "You can now run: ruv --help"
-else
-  echo "⚠ $INSTALL_DIR is NOT in your \$PATH"
-  echo ""
-  echo "Add this line to your shell profile (~/.zshrc, ~/.bashrc, etc):"
-  echo ""
-  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-  echo ""
-  echo "Then restart your terminal or run: source ~/.zshrc"
-fi
+# Check if install dir is in PATH (POSIX-compatible)
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*)
+    echo "$INSTALL_DIR is already in your \$PATH"
+    echo ""
+    echo "You can now run: ruv --help"
+    ;;
+  *)
+    echo "WARNING: $INSTALL_DIR is NOT in your \$PATH"
+    echo ""
+    echo "Add this line to your shell profile (~/.zshrc, ~/.bashrc, etc):"
+    echo ""
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo ""
+    echo "Then restart your terminal or run: source ~/.zshrc"
+    ;;
+esac
