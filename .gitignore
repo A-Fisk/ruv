@@ -5,6 +5,10 @@
 /ruv_lib
 /.ruv
 
+# Local test/dev files — not part of the project's source
+/ruv.toml
+/ruv.lock
+
 # Force-include lock files (overrides global *.lock rule)
 !Cargo.lock
 !ruv.lock
