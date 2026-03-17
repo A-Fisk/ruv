@@ -1,5 +1,8 @@
 use std::collections::HashSet;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::version::{RVersion, VersionReq};
 
@@ -19,6 +22,8 @@ impl RInstallation {
         self.bin_dir.join("Rscript")
     }
 }
+
+// ── Discovery ────────────────────────────────────────────────────────────────
 
 /// Probe standard locations and return all R installations found, sorted
 /// descending by version (highest first).
@@ -103,6 +108,8 @@ fn parse_r_version_output(text: &str) -> Option<RVersion> {
     RVersion::parse(version_str)
 }
 
+// ── Selection ─────────────────────────────────────────────────────────────────
+
 /// Prefix match: `"4.3"` matches `4.3.0`, `4.3.1`, `4.3.2` but not `4.4.0`.
 fn bare_version_matches(installed: &RVersion, spec: &RVersion) -> bool {
     spec.parts()
@@ -111,48 +118,307 @@ fn bare_version_matches(installed: &RVersion, spec: &RVersion) -> bool {
         .all(|(i, part)| installed.parts().get(i).copied().unwrap_or(0) == *part)
 }
 
-/// Find the best installed R satisfying `constraint`.
+type ConstraintFn = Box<dyn Fn(&RVersion) -> bool>;
+
+/// Build a predicate from a constraint string (operator or bare version).
+fn make_constraint(constraint: &str) -> Result<ConstraintFn, String> {
+    if let Some(req) = VersionReq::parse(constraint) {
+        Ok(Box::new(move |v| req.matches(v)))
+    } else if let Some(spec) = RVersion::parse(constraint) {
+        Ok(Box::new(move |v| bare_version_matches(v, &spec)))
+    } else {
+        Err(format!(
+            "could not parse r-version constraint: {}",
+            constraint
+        ))
+    }
+}
+
+/// Find the best *already installed* R satisfying `constraint`.
 ///
 /// Constraint formats:
 /// - `"4.3"` (bare) — prefix match: any R 4.3.x
 /// - `">=4.3"`, `"==4.3.2"`, etc. — standard version operator
 pub fn select_r(constraint: &str) -> Result<RInstallation, String> {
+    let matches_constraint = make_constraint(constraint)?;
+
     let installations = find_r_installations();
-    if installations.is_empty() {
-        return Err(
-            "no R installations found — install R from https://cran.r-project.org".to_string(),
-        );
-    }
 
     let found: Vec<String> = installations
         .iter()
         .map(|i| i.version.to_string())
         .collect();
 
-    let matches_constraint: Box<dyn Fn(&RVersion) -> bool> =
-        if let Some(req) = VersionReq::parse(constraint) {
-            Box::new(move |v| req.matches(v))
-        } else if let Some(spec) = RVersion::parse(constraint) {
-            Box::new(move |v| bare_version_matches(v, &spec))
-        } else {
-            return Err(format!(
-                "could not parse r-version constraint: {}",
-                constraint
-            ));
-        };
-
     // Sorted descending, so first match is the highest satisfying version
     installations
         .into_iter()
         .find(|i| matches_constraint(&i.version))
         .ok_or_else(|| {
+            if found.is_empty() {
+                "no R installations found on this system".to_string()
+            } else {
+                format!(
+                    "r-version = \"{}\" not satisfied by any installed R (found: {})",
+                    constraint,
+                    found.join(", ")
+                )
+            }
+        })
+}
+
+// ── Download & install ────────────────────────────────────────────────────────
+
+fn r_managed_dir() -> PathBuf {
+    dirs::data_local_dir()
+        .expect("could not find local data directory")
+        .join("ruv")
+        .join("r")
+}
+
+fn cran_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" => "big-sur-arm64",
+        _ => "big-sur-x86_64",
+    }
+}
+
+fn cran_arch_suffix() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        _ => "x86_64",
+    }
+}
+
+/// Fetch available R versions for this platform from the CRAN directory listing.
+fn fetch_available_r_versions() -> Result<Vec<RVersion>, String> {
+    let url = format!(
+        "https://cran.r-project.org/bin/macosx/{}/base/",
+        cran_arch()
+    );
+    let body = reqwest::blocking::get(&url)
+        .map_err(|e| format!("failed to fetch CRAN version list: {}", e))?
+        .text()
+        .map_err(|e| format!("failed to read CRAN version list: {}", e))?;
+    let versions = parse_cran_pkg_listing(&body, cran_arch_suffix());
+    if versions.is_empty() {
+        Err("no R versions found in CRAN listing".to_string())
+    } else {
+        Ok(versions)
+    }
+}
+
+/// Parse CRAN directory listing HTML for .pkg filenames, e.g. `R-4.3.2-arm64.pkg`.
+fn parse_cran_pkg_listing(html: &str, arch_suffix: &str) -> Vec<RVersion> {
+    let suffix = format!("-{}.pkg", arch_suffix);
+    let mut versions = Vec::new();
+    for part in html.split("R-") {
+        let Some(end) = part.find(suffix.as_str()) else {
+            continue;
+        };
+        let version_str = &part[..end];
+        if let Some(v) = RVersion::parse(version_str) {
+            versions.push(v);
+        }
+    }
+    versions.sort_by(|a, b| b.cmp(a)); // descending
+    versions.dedup_by(|a, b| a == b);
+    versions
+}
+
+/// Pick the best version from `available` that satisfies `constraint`.
+fn resolve_version_to_download(
+    constraint: &str,
+    available: &[RVersion],
+) -> Result<RVersion, String> {
+    let matches_constraint = make_constraint(constraint)?;
+    available
+        .iter()
+        .find(|v| matches_constraint(v))
+        .cloned()
+        .ok_or_else(|| {
             format!(
-                "r-version = \"{}\" not satisfied by any installed R (found: {}) — update r-version in ruv.toml or install R from https://cran.r-project.org",
-                constraint,
-                found.join(", ")
+                "no R version on CRAN satisfies {} — check https://cran.r-project.org",
+                constraint
             )
         })
 }
+
+/// Download the R .pkg for `version` to a temp file, with a progress bar.
+fn download_r_pkg(version: &RVersion) -> Result<PathBuf, String> {
+    let url = format!(
+        "https://cran.r-project.org/bin/macosx/{}/base/R-{}-{}.pkg",
+        cran_arch(),
+        version,
+        cran_arch_suffix()
+    );
+
+    let response = reqwest::blocking::get(&url)
+        .map_err(|e| format!("failed to download R {}: {}", version, e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "failed to download R {} (HTTP {})\n       URL: {}",
+            version,
+            response.status(),
+            url
+        ));
+    }
+
+    let total = response.content_length().unwrap_or(0);
+    let pb = ProgressBar::new(total);
+    pb.set_style(
+        ProgressStyle::with_template(
+            "  Downloading R {msg} [{wide_bar:.green/dim}] {bytes:>10}/{total_bytes:<10}",
+        )
+        .unwrap()
+        .progress_chars("━━╌"),
+    );
+    pb.set_message(version.to_string());
+
+    let mut src = pb.wrap_read(response);
+    let mut bytes = Vec::new();
+    src.read_to_end(&mut bytes)
+        .map_err(|e| format!("failed to read R download: {}", e))?;
+    pb.finish_and_clear();
+
+    let tmp = std::env::temp_dir().join(format!("ruv-R-{}-{}.pkg", version, cran_arch_suffix()));
+    std::fs::write(&tmp, &bytes).map_err(|e| format!("failed to write R pkg to temp: {}", e))?;
+    Ok(tmp)
+}
+
+/// Extract the R .pkg into `dest_dir` using `pkgutil --expand` + `cpio`.
+/// Only available on macOS.
+#[cfg(target_os = "macos")]
+fn extract_r_pkg(pkg_path: &Path, dest_dir: &Path) -> Result<(), String> {
+    let expand_dir = std::env::temp_dir().join(format!("ruv-r-expand-{}", std::process::id()));
+
+    // Step 1: expand the XAR archive
+    let status = std::process::Command::new("pkgutil")
+        .args([
+            "--expand",
+            &pkg_path.to_string_lossy(),
+            &expand_dir.to_string_lossy(),
+        ])
+        .status()
+        .map_err(|e| format!("failed to run pkgutil: {}", e))?;
+    if !status.success() {
+        return Err("pkgutil --expand failed".to_string());
+    }
+
+    // Step 2: find the R framework payload (R-fw.pkg/Payload)
+    let payload = find_fw_payload(&expand_dir)?;
+
+    // Step 3: decompress cpio payload into dest_dir
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(format!(
+            "gzip -dc '{}' | cpio -id 2>/dev/null",
+            payload.to_string_lossy()
+        ))
+        .current_dir(dest_dir)
+        .status()
+        .map_err(|e| format!("failed to extract R framework: {}", e))?;
+    if !status.success() {
+        return Err("cpio extraction failed".to_string());
+    }
+
+    // Clean up temp expand dir
+    let _ = std::fs::remove_dir_all(&expand_dir);
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn extract_r_pkg(_pkg_path: &Path, _dest_dir: &Path) -> Result<(), String> {
+    Err("automatic R installation is only supported on macOS currently".to_string())
+}
+
+/// Find the R framework Payload file inside an expanded .pkg directory.
+/// Looks for a subdirectory matching `*-fw.pkg` or `R-fw.pkg`.
+fn find_fw_payload(expand_dir: &Path) -> Result<PathBuf, String> {
+    let entries = std::fs::read_dir(expand_dir)
+        .map_err(|e| format!("failed to read expanded pkg dir: {}", e))?;
+
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        if name.ends_with("-fw.pkg") || name == "r-fw.pkg" {
+            let payload = entry.path().join("Payload");
+            if payload.exists() {
+                return Ok(payload);
+            }
+        }
+    }
+    Err(format!(
+        "could not find R framework payload in expanded pkg at {}",
+        expand_dir.display()
+    ))
+}
+
+/// Recursively walk `dir` to find a `bin/R` file, returning the `bin/` directory.
+fn find_r_bin_in_dir(dir: &Path) -> Option<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return None;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if path.file_name().map(|n| n == "bin").unwrap_or(false)
+                && path.join("R").exists()
+                && path.join("Rscript").exists()
+            {
+                return Some(path);
+            }
+            if let Some(found) = find_r_bin_in_dir(&path) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// Download and install the best R version satisfying `constraint`.
+/// Installs to `~/.local/share/ruv/r/{version}/` and returns the installation.
+pub fn auto_install_r(constraint: &str) -> Result<RInstallation, String> {
+    println!("  Fetching available R versions from CRAN...");
+    let available = fetch_available_r_versions()?;
+
+    let version = resolve_version_to_download(constraint, &available)?;
+
+    let install_dir = r_managed_dir().join(version.to_string());
+
+    // Already downloaded and extracted previously
+    if install_dir.join("bin").join("R").exists() {
+        let bin_dir = install_dir.join("bin");
+        return Ok(RInstallation { version, bin_dir });
+    }
+
+    std::fs::create_dir_all(&install_dir)
+        .map_err(|e| format!("failed to create R install dir: {}", e))?;
+
+    let pkg_path = download_r_pkg(&version)?;
+    println!("  Installing R {}...", version);
+    extract_r_pkg(&pkg_path, &install_dir)?;
+    let _ = std::fs::remove_file(&pkg_path);
+
+    // Find the R binary inside the extracted framework and create a stable bin/ symlink
+    let r_bin_dir = find_r_bin_in_dir(&install_dir).ok_or_else(|| {
+        format!(
+            "could not find R binary after extraction in {}",
+            install_dir.display()
+        )
+    })?;
+
+    let stable_bin = install_dir.join("bin");
+    if !stable_bin.exists() {
+        make_symlink(&r_bin_dir, &stable_bin)?;
+    }
+
+    Ok(RInstallation {
+        version,
+        bin_dir: stable_bin,
+    })
+}
+
+// ── Symlinks ──────────────────────────────────────────────────────────────────
 
 /// Create `.ruv/bin/R` and `.ruv/bin/Rscript` symlinks pointing at `installation`.
 pub fn setup_r_symlinks(installation: &RInstallation) -> Result<(), String> {
@@ -166,7 +432,6 @@ pub fn setup_r_symlinks(installation: &RInstallation) -> Result<(), String> {
 
 #[cfg(unix)]
 fn make_symlink(target: &Path, link: &Path) -> Result<(), String> {
-    // Remove stale link if present
     if link.symlink_metadata().is_ok() {
         std::fs::remove_file(link)
             .map_err(|e| format!("failed to remove {}: {}", link.display(), e))?;
@@ -192,6 +457,8 @@ pub fn project_r() -> Option<PathBuf> {
     if p.exists() { Some(p) } else { None }
 }
 
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,6 +483,16 @@ mod tests {
     fn test_parse_r_version_output_invalid() {
         assert!(parse_r_version_output("bash: R: command not found").is_none());
         assert!(parse_r_version_output("").is_none());
+    }
+
+    #[test]
+    fn test_parse_r_version_two_part() {
+        assert_eq!(
+            parse_r_version_output("R version 4.5 (2025-01-01)")
+                .unwrap()
+                .to_string(),
+            "4.5"
+        );
     }
 
     #[test]
@@ -265,12 +542,46 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_r_version_two_part() {
-        assert_eq!(
-            parse_r_version_output("R version 4.5 (2025-01-01)")
-                .unwrap()
-                .to_string(),
-            "4.5"
-        );
+    fn test_parse_cran_pkg_listing_arm64() {
+        let html = r#"
+            <a href="R-4.3.2-arm64.pkg">R-4.3.2-arm64.pkg</a>
+            <a href="R-4.4.0-arm64.pkg">R-4.4.0-arm64.pkg</a>
+            <a href="R-4.5.1-arm64.pkg">R-4.5.1-arm64.pkg</a>
+            <a href="R-latest-arm64.pkg">R-latest-arm64.pkg</a>
+        "#;
+        let versions = parse_cran_pkg_listing(html, "arm64");
+        // latest should be excluded (not a valid version), sorted descending
+        let strs: Vec<String> = versions.iter().map(|v| v.to_string()).collect();
+        assert_eq!(strs, vec!["4.5.1", "4.4.0", "4.3.2"]);
+    }
+
+    #[test]
+    fn test_resolve_version_to_download_bare() {
+        let available: Vec<RVersion> = ["4.5.1", "4.4.2", "4.3.3", "4.3.2"]
+            .iter()
+            .map(|s| RVersion::parse(s).unwrap())
+            .collect();
+        let v = resolve_version_to_download("4.3", &available).unwrap();
+        assert_eq!(v.to_string(), "4.3.3"); // highest 4.3.x
+    }
+
+    #[test]
+    fn test_resolve_version_to_download_gte() {
+        let available: Vec<RVersion> = ["4.5.1", "4.4.2", "4.3.3"]
+            .iter()
+            .map(|s| RVersion::parse(s).unwrap())
+            .collect();
+        let v = resolve_version_to_download(">=4.4", &available).unwrap();
+        assert_eq!(v.to_string(), "4.5.1"); // highest satisfying >=4.4
+    }
+
+    #[test]
+    fn test_resolve_version_to_download_exact() {
+        let available: Vec<RVersion> = ["4.5.1", "4.4.2", "4.3.3"]
+            .iter()
+            .map(|s| RVersion::parse(s).unwrap())
+            .collect();
+        let v = resolve_version_to_download("==4.4.2", &available).unwrap();
+        assert_eq!(v.to_string(), "4.4.2");
     }
 }

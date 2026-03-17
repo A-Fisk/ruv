@@ -198,16 +198,16 @@ fn main() {
             }
 
             if let Some(constraint) = &config.project.r_version {
-                match r_version::select_r(constraint) {
-                    Ok(installation) => match r_version::setup_r_symlinks(&installation) {
-                        Ok(()) => println!(
-                            "Using R {} ({})",
-                            installation.version,
-                            installation.bin_dir.display()
-                        ),
+                let installation = r_version::select_r(constraint).or_else(|_| {
+                    println!("  R {} not found locally, downloading...", constraint);
+                    r_version::auto_install_r(constraint)
+                });
+                match installation {
+                    Ok(inst) => match r_version::setup_r_symlinks(&inst) {
+                        Ok(()) => println!("Using R {} ({})", inst.version, inst.bin_dir.display()),
                         Err(e) => eprintln!("warning: {}", e),
                     },
-                    Err(e) => eprintln!("warning: {}", e),
+                    Err(e) => eprintln!("warning: failed to set up R: {}", e),
                 }
             }
         }
