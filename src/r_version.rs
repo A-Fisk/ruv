@@ -52,19 +52,6 @@ pub fn find_r_installations() -> Vec<RInstallation> {
         }
     }
 
-    // Managed by ruv: ~/.local/share/ruv/r/{version}/bin/
-    if let Some(data_dir) = dirs::data_local_dir() {
-        let managed = data_dir.join("ruv").join("r");
-        if let Ok(entries) = std::fs::read_dir(&managed) {
-            for entry in entries.flatten() {
-                let bin = entry.path().join("bin");
-                if bin.join("R").exists() {
-                    bin_dirs.push(bin);
-                }
-            }
-        }
-    }
-
     let mut seen: HashSet<String> = HashSet::new();
     let mut installations: Vec<RInstallation> = bin_dirs
         .into_iter()
@@ -78,6 +65,31 @@ pub fn find_r_installations() -> Vec<RInstallation> {
             }
         })
         .collect();
+
+    // Managed by ruv: ~/.local/share/ruv/r/{version}/bin/
+    // Trust the directory name for the version — probing fails when R can't find
+    // its own framework outside the standard /Library/Frameworks location.
+    if let Some(data_dir) = dirs::data_local_dir() {
+        let managed = data_dir.join("ruv").join("r");
+        if let Ok(entries) = std::fs::read_dir(&managed) {
+            for entry in entries.flatten() {
+                let bin = entry.path().join("bin");
+                if !bin.join("R").exists() {
+                    continue;
+                }
+                let dir_name = entry.file_name().to_string_lossy().to_string();
+                let Some(version) = RVersion::parse(&dir_name) else {
+                    continue;
+                };
+                if seen.insert(version.to_string()) {
+                    installations.push(RInstallation {
+                        version,
+                        bin_dir: bin,
+                    });
+                }
+            }
+        }
+    }
 
     // Highest version first so select_r picks the best match naturally
     installations.sort_by(|a, b| b.version.cmp(&a.version));
@@ -455,31 +467,57 @@ local({
 # </ruv-managed>
 "#;
 
-/// Write (or update) the project-root `.Rprofile` with a ruv-managed block.
+/// Write (or update) the project R profile files.
 ///
-/// The block sets `.libPaths()` to `.ruv/library` (picked up by RStudio automatically)
-/// and redirects workspace save/restore to `.ruv/.RData`.
-/// If `.Rprofile` already exists the block is appended unless it is already present.
-pub fn setup_r_profile() -> Result<(), String> {
-    let profile_path = Path::new(".Rprofile");
-    let existing = if profile_path.exists() {
-        std::fs::read_to_string(profile_path)
-            .map_err(|e| format!("failed to read .Rprofile: {}", e))?
+/// Creates `{project_name}.Rprofile` with the ruv block (sets `.libPaths()` to
+/// `.ruv/library` so RStudio finds packages). The named file is visible in
+/// RStudio's Files pane without enabling "Show hidden files".
+///
+/// Also writes a minimal `.Rprofile` that sources it, so R picks it up automatically.
+pub fn setup_r_profile(project_name: &str) -> Result<(), String> {
+    let named = format!("{}.Rprofile", project_name);
+    let named_path = Path::new(&named);
+
+    // Write the named profile if the ruv block isn't already present
+    let existing = if named_path.exists() {
+        std::fs::read_to_string(named_path)
+            .map_err(|e| format!("failed to read {}: {}", named, e))?
     } else {
         String::new()
     };
 
-    if existing.contains(RPROFILE_MARKER) {
-        return Ok(()); // already up to date
+    if !existing.contains(RPROFILE_MARKER) {
+        let separator = if existing.is_empty() || existing.ends_with('\n') {
+            ""
+        } else {
+            "\n"
+        };
+        let updated = format!("{}{}{}", existing, separator, RPROFILE_BLOCK);
+        std::fs::write(named_path, &updated)
+            .map_err(|e| format!("failed to write {}: {}", named, e))?;
     }
 
-    let separator = if existing.is_empty() || existing.ends_with('\n') {
-        ""
+    // Write a minimal .Rprofile that sources the named file, if not already set up
+    let dot_profile = Path::new(".Rprofile");
+    let source_line = format!("source(\"{}\")\n", named);
+    let dot_existing = if dot_profile.exists() {
+        std::fs::read_to_string(dot_profile)
+            .map_err(|e| format!("failed to read .Rprofile: {}", e))?
     } else {
-        "\n"
+        String::new()
     };
-    let updated = format!("{}{}{}", existing, separator, RPROFILE_BLOCK);
-    std::fs::write(profile_path, updated).map_err(|e| format!("failed to write .Rprofile: {}", e))
+    if !dot_existing.contains(&source_line) {
+        let separator = if dot_existing.is_empty() || dot_existing.ends_with('\n') {
+            ""
+        } else {
+            "\n"
+        };
+        let updated = format!("{}{}{}", dot_existing, separator, source_line);
+        std::fs::write(dot_profile, updated)
+            .map_err(|e| format!("failed to write .Rprofile: {}", e))?;
+    }
+
+    Ok(())
 }
 
 /// Return `.ruv/bin/Rscript` if project symlinks are set up, else `None`.
