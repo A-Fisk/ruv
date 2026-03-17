@@ -90,7 +90,7 @@ CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc \
 ```bash
 # Force x86_64 on M-series Mac
 docker run --rm --platform linux/amd64 ubuntu:22.04 bash -c "
-  apt-get update -q && apt-get install -y dash curl
+  DEBIAN_FRONTEND=noninteractive apt-get update -q && apt-get install -y dash curl
   curl -fsSL https://github.com/A-Fisk/ruv/releases/latest/download/install.sh | dash -s
 "
 ```
@@ -129,7 +129,7 @@ docker run --rm \
 docker run --rm --platform linux/amd64 \
   -v $(pwd)/target/x86_64-unknown-linux-musl/release/ruv:/usr/local/bin/ruv \
   ubuntu:22.04 bash -c "
-    apt-get update -q && apt-get install -y r-base
+    DEBIAN_FRONTEND=noninteractive apt-get update -q && DEBIAN_FRONTEND=noninteractive apt-get install -y r-base
     mkdir /test && cd /test
     cat > ruv.toml << 'EOF'
 [project]
@@ -151,7 +151,7 @@ EOF
 docker run --rm --platform linux/amd64 \
   -v $(pwd)/target/x86_64-unknown-linux-musl/release/ruv:/usr/local/bin/ruv \
   ubuntu:22.04 bash -c "
-    apt-get update -q && apt-get install -y r-base
+    DEBIAN_FRONTEND=noninteractive apt-get update -q && DEBIAN_FRONTEND=noninteractive apt-get install -y r-base
     mkdir /test && cd /test
     cat > ruv.toml << 'EOF'
 [project]
@@ -173,7 +173,7 @@ EOF
 ```bash
 cat > /tmp/ruv-test.Dockerfile << 'EOF'
 FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y r-base && rm -rf /var/lib/apt/lists/*
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y r-base && rm -rf /var/lib/apt/lists/*
 COPY target/x86_64-unknown-linux-musl/release/ruv /usr/local/bin/ruv
 WORKDIR /project
 RUN cat > ruv.toml << 'TOML'
