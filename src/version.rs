@@ -22,6 +22,10 @@ impl RVersion {
         parts.map(|p| RVersion { parts: p })
     }
 
+    pub fn parts(&self) -> &[u32] {
+        &self.parts
+    }
+
     /// The smallest possible version — used as the lower bound by pubgrub.
     pub fn minimum() -> Self {
         RVersion { parts: vec![0] }

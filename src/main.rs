@@ -7,6 +7,7 @@ mod crandb;
 mod index;
 mod installer;
 mod lockfile;
+mod r_version;
 mod resolver;
 mod version;
 
@@ -195,6 +196,30 @@ fn main() {
                     fmt_duration(t.elapsed().as_millis())
                 );
             }
+
+            if let Some(constraint) = &config.project.r_version {
+                let installation = r_version::select_r(constraint).or_else(|_| {
+                    println!("  R {} not found locally, downloading...", constraint);
+                    r_version::auto_install_r(constraint)
+                });
+                match installation {
+                    Ok(inst) => {
+                        match r_version::setup_r_symlinks(&inst) {
+                            Ok(()) => {
+                                println!("Using R {} ({})", inst.version, inst.bin_dir.display())
+                            }
+                            Err(e) => eprintln!("warning: {}", e),
+                        }
+                        if let Err(e) = r_version::setup_r_profile() {
+                            eprintln!("warning: {}", e);
+                        }
+                        if let Err(e) = r_version::setup_rproj(&config.project.name) {
+                            eprintln!("warning: {}", e);
+                        }
+                    }
+                    Err(e) => eprintln!("warning: failed to set up R: {}", e),
+                }
+            }
         }
 
         Commands::Add { package } => {
@@ -217,8 +242,34 @@ fn main() {
             let lib_dir = std::fs::canonicalize(LIB_DIR)
                 .expect("no project library found — run `ruv lock && ruv sync` first");
 
-            std::process::Command::new("Rscript")
-                .args(&args)
+            // Route to managed R/Rscript if symlinks exist, else fall back to system.
+            // `ruv run R ...`       → R binary (interactive REPL, workspace via .Rprofile)
+            // `ruv run Rscript ...` → Rscript binary
+            // `ruv run script.R`    → Rscript script.R (backward compat)
+            let (program, run_args): (std::ffi::OsString, Vec<String>) =
+                match args.first().map(String::as_str) {
+                    Some("R") => {
+                        let bin = r_version::project_r()
+                            .map(|p| p.into_os_string())
+                            .unwrap_or_else(|| "R".into());
+                        (bin, args[1..].to_vec())
+                    }
+                    Some("Rscript") => {
+                        let bin = r_version::project_rscript()
+                            .map(|p| p.into_os_string())
+                            .unwrap_or_else(|| "Rscript".into());
+                        (bin, args[1..].to_vec())
+                    }
+                    _ => {
+                        let bin = r_version::project_rscript()
+                            .map(|p| p.into_os_string())
+                            .unwrap_or_else(|| "Rscript".into());
+                        (bin, args)
+                    }
+                };
+
+            std::process::Command::new(program)
+                .args(&run_args)
                 .env("R_LIBS", lib_dir)
                 .status()
                 .unwrap();
