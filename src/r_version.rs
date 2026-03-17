@@ -839,6 +839,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "macos")]
     fn test_parse_cran_pkg_listing_arm64() {
         let html = r#"
             <a href="R-4.3.2-arm64.pkg">R-4.3.2-arm64.pkg</a>
