@@ -22,6 +22,20 @@ R package management is slow, fragmented, and requires too many tools:
 - **Integrated** — package management + R version management in one tool
 - **Simple** — one binary, familiar `uv`-style workflow
 
+## Installation
+
+```sh
+curl -LsSf https://github.com/A-Fisk/ruv/releases/latest/download/install.sh | sh
+```
+
+Then add `~/.local/bin` to your `$PATH` if it isn't already:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+For manual downloads, see the [releases page](https://github.com/A-Fisk/ruv/releases).
+
 ## Usage
 
 ### Project setup
