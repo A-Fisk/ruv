@@ -327,6 +327,7 @@ fn parse_posit_deb_listing(html: &str, arch: &str) -> Vec<RVersion> {
 }
 
 /// Parse CRAN directory listing HTML for .pkg filenames, e.g. `R-4.3.2-arm64.pkg`.
+#[cfg(target_os = "macos")]
 fn parse_cran_pkg_listing(html: &str, arch_suffix: &str) -> Vec<RVersion> {
     let suffix = format!("-{}.pkg", arch_suffix);
     let mut versions = Vec::new();
