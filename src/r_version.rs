@@ -44,11 +44,34 @@ pub fn find_r_installations() -> Vec<RInstallation> {
         }
     }
 
+    // macOS: Homebrew
+    #[cfg(target_os = "macos")]
+    {
+        let bin = PathBuf::from("/opt/homebrew/bin");
+        if bin.join("R").exists() {
+            bin_dirs.push(bin);
+        }
+    }
+
     // Common PATH locations
-    for dir in &["/usr/local/bin", "/usr/bin", "/opt/homebrew/bin"] {
+    for dir in &["/usr/local/bin", "/usr/bin"] {
         let bin = PathBuf::from(dir);
         if bin.join("R").exists() {
             bin_dirs.push(bin);
+        }
+    }
+
+    // Linux: Posit/rig managed installations at /opt/R/{version}/bin/
+    #[cfg(target_os = "linux")]
+    {
+        let opt_r = Path::new("/opt/R");
+        if let Ok(entries) = std::fs::read_dir(opt_r) {
+            for entry in entries.flatten() {
+                let bin = entry.path().join("bin");
+                if bin.join("R").exists() {
+                    bin_dirs.push(bin);
+                }
+            }
         }
     }
 

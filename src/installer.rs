@@ -8,11 +8,72 @@ use std::io::Read;
 use std::path::Path;
 use std::sync::OnceLock;
 
-pub fn get_arch() -> &'static str {
-    match std::env::consts::ARCH {
-        "aarch64" => "big-sur-arm64",
-        "x86_64" => "big-sur-x86_64",
-        other => panic!("Unsupported architecture: {}", other),
+/// Returns the RSPM platform path segment and file extension for the current OS/arch.
+/// macOS: ("macosx/big-sur-arm64", "tgz")
+/// Linux: ("linux/ubuntu-jammy", "tar.gz")  — distro read from /etc/os-release
+pub fn get_platform() -> (&'static str, &'static str) {
+    static PLATFORM: OnceLock<(String, String)> = OnceLock::new();
+    let (path, ext) = PLATFORM.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        {
+            let arch = match std::env::consts::ARCH {
+                "aarch64" => "macosx/big-sur-arm64",
+                "x86_64" => "macosx/big-sur-x86_64",
+                other => panic!("Unsupported macOS architecture: {}", other),
+            };
+            (arch.to_string(), "tgz".to_string())
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let distro = linux_rspm_distro();
+            (format!("linux/{}", distro), "tar.gz".to_string())
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        {
+            panic!("Unsupported OS for RSPM package downloads");
+        }
+    });
+    (path.as_str(), ext.as_str())
+}
+
+/// Read /etc/os-release and map to an RSPM distro string.
+/// Falls back to "ubuntu-jammy" (Ubuntu 22.04) if unrecognised.
+#[cfg(target_os = "linux")]
+fn linux_rspm_distro() -> String {
+    let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+    let mut id = String::new();
+    let mut codename = String::new();
+    let mut version_id = String::new();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("ID=") {
+            id = v.trim_matches('"').to_lowercase();
+        } else if let Some(v) = line.strip_prefix("VERSION_CODENAME=") {
+            codename = v.trim_matches('"').to_lowercase();
+        } else if let Some(v) = line.strip_prefix("VERSION_ID=") {
+            version_id = v.trim_matches('"').to_string();
+        }
+    }
+    // Prefer codename (ubuntu: jammy, noble; debian: bullseye, bookworm)
+    if !codename.is_empty() && matches!(id.as_str(), "ubuntu" | "debian") {
+        return format!("{}-{}", id, codename);
+    }
+    // Fallback: map version_id for distros without VERSION_CODENAME
+    match (id.as_str(), version_id.as_str()) {
+        ("ubuntu", "22.04") => "ubuntu-jammy".to_string(),
+        ("ubuntu", "24.04") => "ubuntu-noble".to_string(),
+        ("ubuntu", "20.04") => "ubuntu-focal".to_string(),
+        ("debian", "11") => "debian-bullseye".to_string(),
+        ("debian", "12") => "debian-bookworm".to_string(),
+        ("rhel" | "centos", "7") => "centos7".to_string(),
+        ("rhel", "8") => "rhel8".to_string(),
+        ("rhel", "9") => "rhel9".to_string(),
+        _ => {
+            eprintln!(
+                "warning: unrecognised Linux distro ({} {}), defaulting to ubuntu-jammy for RSPM",
+                id, version_id
+            );
+            "ubuntu-jammy".to_string()
+        }
     }
 }
 
@@ -39,10 +100,17 @@ pub fn get_r_version() -> &'static str {
 
 /// Constructs a binary download URL from an RSPM registry base URL.
 /// registry is e.g. "https://packagemanager.posit.co/cran/2024-06-05"
-fn make_url(name: &str, version: &str, arch: &str, r_version: &str, registry: &str) -> String {
+fn make_url(
+    name: &str,
+    version: &str,
+    platform: &str,
+    ext: &str,
+    r_version: &str,
+    registry: &str,
+) -> String {
     format!(
-        "{}/bin/macosx/{}/contrib/{}/{}_{}.tgz",
-        registry, arch, r_version, name, version
+        "{}/bin/{}/contrib/{}/{}_{}.{}",
+        registry, platform, r_version, name, version, ext
     )
 }
 
@@ -50,7 +118,7 @@ fn make_url(name: &str, version: &str, arch: &str, r_version: &str, registry: &s
 pub fn build_urls_from_pairs(
     packages: &[(String, String, String)],
 ) -> Vec<(String, String, String)> {
-    let arch = get_arch();
+    let (platform, ext) = get_platform();
     let r_version = get_r_version();
     packages
         .iter()
@@ -58,7 +126,7 @@ pub fn build_urls_from_pairs(
             (
                 name.clone(),
                 version.clone(),
-                make_url(name, version, arch, r_version, registry),
+                make_url(name, version, platform, ext, r_version, registry),
             )
         })
         .collect()
@@ -72,14 +140,14 @@ pub fn build_urls(
     packages: &[String],
     index: &HashMap<String, Package>,
 ) -> Vec<(String, String, String)> {
-    let arch = get_arch();
+    let (platform, ext) = get_platform();
     let r_version = get_r_version();
 
     packages
         .iter()
         .filter_map(|name| {
             let pkg = index.get(name)?;
-            let url = make_url(name, &pkg.version, arch, r_version, RSPM_LATEST);
+            let url = make_url(name, &pkg.version, platform, ext, r_version, RSPM_LATEST);
             Some((name.clone(), pkg.version.clone(), url))
         })
         .collect()
