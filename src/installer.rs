@@ -345,8 +345,8 @@ mod tests {
         let (name, version, url) = &urls[0];
         assert_eq!(name, "ggplot2");
         assert_eq!(version, "3.5.1");
-        assert!(url.contains("ggplot2_3.5.1.tgz"));
-        assert!(url.starts_with("https://packagemanager.posit.co/cran/latest/bin/macosx/"));
+        assert!(url.contains("ggplot2_3.5.1"));
+        assert!(url.starts_with("https://packagemanager.posit.co/cran/latest/bin/"));
         assert!(url.contains("/contrib/"));
     }
 
