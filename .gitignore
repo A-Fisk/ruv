@@ -9,6 +9,9 @@
 /ruv.toml
 /ruv.lock
 
+# Claude Code
+/.claude
+
 # Force-include lock files (overrides global *.lock rule)
 !Cargo.lock
 !ruv.lock
