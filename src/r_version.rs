@@ -467,57 +467,55 @@ local({
 # </ruv-managed>
 "#;
 
-/// Write (or update) the project R profile files.
-///
-/// Creates `{project_name}.Rprofile` with the ruv block (sets `.libPaths()` to
-/// `.ruv/library` so RStudio finds packages). The named file is visible in
-/// RStudio's Files pane without enabling "Show hidden files".
-///
-/// Also writes a minimal `.Rprofile` that sources it, so R picks it up automatically.
-pub fn setup_r_profile(project_name: &str) -> Result<(), String> {
-    let named = format!("{}.Rprofile", project_name);
-    let named_path = Path::new(&named);
-
-    // Write the named profile if the ruv block isn't already present
-    let existing = if named_path.exists() {
-        std::fs::read_to_string(named_path)
-            .map_err(|e| format!("failed to read {}: {}", named, e))?
-    } else {
-        String::new()
-    };
-
-    if !existing.contains(RPROFILE_MARKER) {
-        let separator = if existing.is_empty() || existing.ends_with('\n') {
-            ""
-        } else {
-            "\n"
-        };
-        let updated = format!("{}{}{}", existing, separator, RPROFILE_BLOCK);
-        std::fs::write(named_path, &updated)
-            .map_err(|e| format!("failed to write {}: {}", named, e))?;
-    }
-
-    // Write a minimal .Rprofile that sources the named file, if not already set up
-    let dot_profile = Path::new(".Rprofile");
-    let source_line = format!("source(\"{}\")\n", named);
-    let dot_existing = if dot_profile.exists() {
-        std::fs::read_to_string(dot_profile)
+/// Write (or update) the project-root `.Rprofile` with the ruv-managed block.
+/// If `.Rprofile` already exists the block is appended unless already present.
+pub fn setup_r_profile() -> Result<(), String> {
+    let profile_path = Path::new(".Rprofile");
+    let existing = if profile_path.exists() {
+        std::fs::read_to_string(profile_path)
             .map_err(|e| format!("failed to read .Rprofile: {}", e))?
     } else {
         String::new()
     };
-    if !dot_existing.contains(&source_line) {
-        let separator = if dot_existing.is_empty() || dot_existing.ends_with('\n') {
-            ""
-        } else {
-            "\n"
-        };
-        let updated = format!("{}{}{}", dot_existing, separator, source_line);
-        std::fs::write(dot_profile, updated)
-            .map_err(|e| format!("failed to write .Rprofile: {}", e))?;
+
+    if existing.contains(RPROFILE_MARKER) {
+        return Ok(());
     }
 
-    Ok(())
+    let separator = if existing.is_empty() || existing.ends_with('\n') {
+        ""
+    } else {
+        "\n"
+    };
+    let updated = format!("{}{}{}", existing, separator, RPROFILE_BLOCK);
+    std::fs::write(profile_path, updated).map_err(|e| format!("failed to write .Rprofile: {}", e))
+}
+
+/// Create `{project_name}.Rproj` if it doesn't already exist.
+/// Opening this in RStudio sets the working directory and auto-sources `.Rprofile`,
+/// so packages in `.ruv/library` are available immediately.
+pub fn setup_rproj(project_name: &str) -> Result<(), String> {
+    let rproj_path = format!("{}.Rproj", project_name);
+    if Path::new(&rproj_path).exists() {
+        return Ok(());
+    }
+    let content = "\
+Version: 1.0
+
+RestoreWorkspace: No
+SaveWorkspace: No
+AlwaysSaveHistory: Default
+
+EnableCodeIndexing: Yes
+UseSpacesForTab: Yes
+NumSpacesForTab: 2
+Encoding: UTF-8
+
+RnwWeave: Sweave
+LaTeX: pdfLaTeX
+";
+    std::fs::write(&rproj_path, content)
+        .map_err(|e| format!("failed to write {}: {}", rproj_path, e))
 }
 
 /// Return `.ruv/bin/Rscript` if project symlinks are set up, else `None`.

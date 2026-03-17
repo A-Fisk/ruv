@@ -210,7 +210,10 @@ fn main() {
                             }
                             Err(e) => eprintln!("warning: {}", e),
                         }
-                        if let Err(e) = r_version::setup_r_profile(&config.project.name) {
+                        if let Err(e) = r_version::setup_r_profile() {
+                            eprintln!("warning: {}", e);
+                        }
+                        if let Err(e) = r_version::setup_rproj(&config.project.name) {
                             eprintln!("warning: {}", e);
                         }
                     }
