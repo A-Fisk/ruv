@@ -103,11 +103,20 @@ fn parse_r_version_output(text: &str) -> Option<RVersion> {
     RVersion::parse(version_str)
 }
 
-/// Find the best installed R satisfying `constraint` (e.g. `">=4.3"`).
-pub fn select_r(constraint: &str) -> Result<RInstallation, String> {
-    let req = VersionReq::parse(constraint)
-        .ok_or_else(|| format!("could not parse r-version constraint: {}", constraint))?;
+/// Prefix match: `"4.3"` matches `4.3.0`, `4.3.1`, `4.3.2` but not `4.4.0`.
+fn bare_version_matches(installed: &RVersion, spec: &RVersion) -> bool {
+    spec.parts()
+        .iter()
+        .enumerate()
+        .all(|(i, part)| installed.parts().get(i).copied().unwrap_or(0) == *part)
+}
 
+/// Find the best installed R satisfying `constraint`.
+///
+/// Constraint formats:
+/// - `"4.3"` (bare) — prefix match: any R 4.3.x
+/// - `">=4.3"`, `"==4.3.2"`, etc. — standard version operator
+pub fn select_r(constraint: &str) -> Result<RInstallation, String> {
     let installations = find_r_installations();
     if installations.is_empty() {
         return Err(
@@ -115,14 +124,32 @@ pub fn select_r(constraint: &str) -> Result<RInstallation, String> {
         );
     }
 
+    let found: Vec<String> = installations
+        .iter()
+        .map(|i| i.version.to_string())
+        .collect();
+
+    let matches_constraint: Box<dyn Fn(&RVersion) -> bool> =
+        if let Some(req) = VersionReq::parse(constraint) {
+            Box::new(move |v| req.matches(v))
+        } else if let Some(spec) = RVersion::parse(constraint) {
+            Box::new(move |v| bare_version_matches(v, &spec))
+        } else {
+            return Err(format!(
+                "could not parse r-version constraint: {}",
+                constraint
+            ));
+        };
+
     // Sorted descending, so first match is the highest satisfying version
     installations
         .into_iter()
-        .find(|i| req.matches(&i.version))
+        .find(|i| matches_constraint(&i.version))
         .ok_or_else(|| {
             format!(
-                "no R installation satisfies {} — install R from https://cran.r-project.org",
-                constraint
+                "r-version = \"{}\" not satisfied by any installed R (found: {}) — update r-version in ruv.toml or install R from https://cran.r-project.org",
+                constraint,
+                found.join(", ")
             )
         })
 }
@@ -189,6 +216,52 @@ mod tests {
     fn test_parse_r_version_output_invalid() {
         assert!(parse_r_version_output("bash: R: command not found").is_none());
         assert!(parse_r_version_output("").is_none());
+    }
+
+    #[test]
+    fn test_bare_version_matches_patch() {
+        let spec = RVersion::parse("4.3").unwrap();
+        assert!(bare_version_matches(
+            &RVersion::parse("4.3.0").unwrap(),
+            &spec
+        ));
+        assert!(bare_version_matches(
+            &RVersion::parse("4.3.1").unwrap(),
+            &spec
+        ));
+        assert!(bare_version_matches(
+            &RVersion::parse("4.3.2").unwrap(),
+            &spec
+        ));
+        assert!(!bare_version_matches(
+            &RVersion::parse("4.4.0").unwrap(),
+            &spec
+        ));
+        assert!(!bare_version_matches(
+            &RVersion::parse("4.5.0").unwrap(),
+            &spec
+        ));
+        assert!(!bare_version_matches(
+            &RVersion::parse("3.3.0").unwrap(),
+            &spec
+        ));
+    }
+
+    #[test]
+    fn test_bare_version_exact_match() {
+        let spec = RVersion::parse("4.3.2").unwrap();
+        assert!(bare_version_matches(
+            &RVersion::parse("4.3.2").unwrap(),
+            &spec
+        ));
+        assert!(!bare_version_matches(
+            &RVersion::parse("4.3.1").unwrap(),
+            &spec
+        ));
+        assert!(!bare_version_matches(
+            &RVersion::parse("4.3.3").unwrap(),
+            &spec
+        ));
     }
 
     #[test]
