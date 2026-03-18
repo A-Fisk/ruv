@@ -425,7 +425,13 @@ mod tests {
     #[test]
     fn test_build_urls_format() {
         let index = make_index(&[("ggplot2", "3.5.1")]);
-        let urls = build_urls_with(&["ggplot2".to_string()], &index, "macosx/big-sur-arm64", "tgz", "4.4");
+        let urls = build_urls_with(
+            &["ggplot2".to_string()],
+            &index,
+            "macosx/big-sur-arm64",
+            "tgz",
+            "4.4",
+        );
         assert_eq!(urls.len(), 1);
         let (name, version, url) = &urls[0];
         assert_eq!(name, "ggplot2");
