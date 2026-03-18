@@ -10,7 +10,7 @@ R package management is slow, fragmented, and requires too many tools:
 
 - `install.packages()` — sequential, no caching, no lockfiles
 - `renv` — lockfiles but slow restoration, no binary cache
-- `pak` — faster installs but no lockfile or version management
+- `pak` — faster installs with lockfile support, but no version management
 - `rig` — R version management, but a separate tool
 
 `ruv` replaces all of them with a single fast binary.
@@ -21,6 +21,22 @@ R package management is slow, fragmented, and requires too many tools:
 - **Reproducible** — lockfile-based installs, exact version pinning
 - **Integrated** — package management + R version management in one tool
 - **Simple** — one binary, familiar `uv`-style workflow
+
+## Installation
+
+```sh
+curl -LsSf https://github.com/A-Fisk/ruv/releases/latest/download/install.sh | sh
+```
+
+Then add `ruv` to your PATH (if not done automatically by the installer):
+
+```sh
+export PATH="$HOME/.ruv/bin:$PATH"
+```
+
+Add that line to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) to make it permanent.
+
+Pre-built binaries for macOS (arm64 and x86_64) are available on the [releases page](https://github.com/A-Fisk/ruv/releases).
 
 ## Usage
 
@@ -91,7 +107,7 @@ ruv --verbose sync   # show per-package source (cache vs download)
 |---|---|---|---|---|
 | Parallel downloads | ❌ | ❌ | ✅ | ✅ |
 | Global binary cache | ❌ | ❌ | ❌ | ✅ |
-| Lockfile | ❌ | ✅ | ❌ | ✅ |
+| Lockfile | ❌ | ✅ | ✅ | ✅ |
 | Reproducible binary installs | ❌ | ⚠️ source only | ❌ | ✅ |
 | Lock/sync separation | ❌ | ❌ | ❌ | ✅ |
 | R version management | ❌ | ❌ | ❌ | 🚧 planned |
