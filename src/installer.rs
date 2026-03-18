@@ -103,7 +103,9 @@ fn parse_os_release(content: &str) -> String {
             eprintln!(
                 "       For HPC clusters, use `ruv sync --offline` with a pre-populated library."
             );
-            eprintln!("       To populate the library on a supported system, run `ruv sync` there first,");
+            eprintln!(
+                "       To populate the library on a supported system, run `ruv sync` there first,"
+            );
             eprintln!("       then copy the .ruv/library directory to the HPC node.");
             std::process::exit(1);
         }
@@ -393,13 +395,21 @@ mod tests {
         let (name, version, url) = &urls[0];
         assert_eq!(name, "ggplot2");
         assert_eq!(version, "3.5.1");
-        assert!(url.contains("ggplot2_3.5.1"), "url should contain pkg_ver: {}", url);
+        assert!(
+            url.contains("ggplot2_3.5.1"),
+            "url should contain pkg_ver: {}",
+            url
+        );
         assert!(
             url.starts_with("https://packagemanager.posit.co/cran/latest"),
             "url should start with RSPM base: {}",
             url
         );
-        assert!(url.contains("/contrib/"), "url should contain /contrib/: {}", url);
+        assert!(
+            url.contains("/contrib/"),
+            "url should contain /contrib/: {}",
+            url
+        );
     }
 
     #[test]

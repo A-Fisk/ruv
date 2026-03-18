@@ -176,15 +176,15 @@ fn main() {
                     println!("Offline mode: using existing library at {}", LIB_DIR);
                     return;
                 } else {
-                    eprintln!("error: --offline requires an existing library at {}", LIB_DIR);
+                    eprintln!(
+                        "error: --offline requires an existing library at {}",
+                        LIB_DIR
+                    );
                     eprintln!(
                         "       On HPC systems, populate the library on a supported system first:"
                     );
                     eprintln!("         1. Run `ruv sync` on a machine with internet access");
-                    eprintln!(
-                        "         2. Copy the {} directory to the HPC node",
-                        LIB_DIR
-                    );
+                    eprintln!("         2. Copy the {} directory to the HPC node", LIB_DIR);
                     eprintln!("         3. Run `ruv sync --offline` on the HPC node");
                     std::process::exit(1);
                 }
