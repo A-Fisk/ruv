@@ -96,6 +96,24 @@ ruv --verbose sync   # show per-package source (cache vs download)
 | Lock/sync separation | ❌ | ❌ | ❌ | ✅ |
 | R version management | ❌ | ❌ | ❌ | 🚧 planned |
 
+## System Requirements
+
+The Linux binary (`x86_64-unknown-linux-gnu`) is compiled against glibc 2.39.
+
+**Minimum supported Linux distributions:**
+
+| Distribution | Minimum Version |
+|---|---|
+| Ubuntu | 24.04 LTS (Noble) |
+| Debian | 13 (Trixie) |
+| Fedora | 39+ |
+
+Ubuntu 22.04 (glibc 2.35) and earlier will produce a runtime error like:
+```
+/lib/x86_64-linux-gnu/libm.so.6: version 'GLIBC_2.39' not found
+```
+Upgrade to Ubuntu 24.04 or use a newer distribution to resolve this.
+
 ## Status
 
 Working MVP on macOS (arm64 + x86_64). Active development — see the [GitHub issues](https://github.com/A-Fisk/ruv/issues) for the roadmap.

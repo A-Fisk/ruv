@@ -86,16 +86,19 @@ echo "Binary location: $INSTALL_DIR/ruv"
 echo ""
 
 # Check if install dir is in PATH
-if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
-  echo "✓ $INSTALL_DIR is already in your \$PATH"
-  echo ""
-  echo "You can now run: ruv --help"
-else
-  echo "⚠ $INSTALL_DIR is NOT in your \$PATH"
-  echo ""
-  echo "Add this line to your shell profile (~/.zshrc, ~/.bashrc, etc):"
-  echo ""
-  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-  echo ""
-  echo "Then restart your terminal or run: source ~/.zshrc"
-fi
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*)
+    echo "✓ $INSTALL_DIR is already in your \$PATH"
+    echo ""
+    echo "You can now run: ruv --help"
+    ;;
+  *)
+    echo "⚠ $INSTALL_DIR is NOT in your \$PATH"
+    echo ""
+    echo "Add this line to your shell profile (~/.zshrc, ~/.bashrc, etc):"
+    echo ""
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo ""
+    echo "Then restart your terminal or run: source ~/.zshrc"
+    ;;
+esac
