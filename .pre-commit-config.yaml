@@ -1,0 +1,17 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        description: Check formatting with rustfmt
+        entry: cargo fmt -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        description: Run clippy linter
+        entry: cargo clippy -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false

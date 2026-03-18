@@ -125,6 +125,21 @@ cargo build
 cargo test
 ```
 
+### Pre-commit hooks
+
+Install [pre-commit](https://pre-commit.com) and set up the hooks to catch formatting and lint issues before push:
+
+```sh
+pip install pre-commit
+pre-commit install
+```
+
+The hooks run `cargo fmt --check` and `cargo clippy` on every commit. To run them manually:
+
+```sh
+pre-commit run --all-files
+```
+
 ## License
 
 MIT
