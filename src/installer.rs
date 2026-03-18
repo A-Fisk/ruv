@@ -16,6 +16,59 @@ pub fn get_arch() -> &'static str {
     }
 }
 
+/// Parses the content of /etc/os-release and returns the RSPM distro path component.
+/// Extracted for testability — production callers use `linux_rspm_distro()`.
+pub(crate) fn parse_rspm_distro(os_release: &str) -> Result<String, String> {
+    let mut id: Option<String> = None;
+    let mut version_id: Option<String> = None;
+
+    for line in os_release.lines() {
+        if let Some(val) = line.strip_prefix("ID=") {
+            id = Some(val.trim_matches('"').to_lowercase());
+        } else if let Some(val) = line.strip_prefix("VERSION_ID=") {
+            version_id = Some(val.trim_matches('"').to_string());
+        }
+    }
+
+    let id = id.ok_or_else(|| {
+        "could not determine Linux distribution from /etc/os-release (no ID= field)".to_string()
+    })?;
+    let version_id = version_id.unwrap_or_default();
+    let major = version_id.split('.').next().unwrap_or("");
+
+    match (id.as_str(), major) {
+        ("rhel" | "rocky" | "almalinux" | "centos", "8") => Ok("rhel8".to_string()),
+        ("rhel" | "rocky" | "almalinux" | "centos", "9") => Ok("rhel9".to_string()),
+        ("ubuntu", _) => match version_id.as_str() {
+            "20.04" => Ok("ubuntu-focal".to_string()),
+            "22.04" => Ok("ubuntu-jammy".to_string()),
+            "24.04" => Ok("ubuntu-noble".to_string()),
+            _ => Ok("ubuntu-jammy".to_string()),
+        },
+        ("sles" | "sle_hpc" | "opensuse-leap" | "opensuse-tumbleweed", _) => Err(format!(
+            "SLES/openSUSE ({} {}) has no RSPM binary support — \
+             install from source or switch to a RHEL- or Ubuntu-based distribution",
+            id, version_id
+        )),
+        _ => Err(format!(
+            "unsupported Linux distribution '{}' — \
+             RSPM binaries are available for RHEL/Rocky/Alma/CentOS (8, 9) and Ubuntu (20.04, 22.04, 24.04)",
+            id
+        )),
+    }
+}
+
+/// Reads /etc/os-release and returns the RSPM distro path component for this system
+/// (e.g. `"rhel8"`, `"rhel9"`, `"ubuntu-jammy"`).
+///
+/// Returns an `Err` for distributions where RSPM publishes no pre-built binaries.
+#[allow(dead_code)]
+pub fn linux_rspm_distro() -> Result<String, String> {
+    let content = std::fs::read_to_string("/etc/os-release")
+        .map_err(|e| format!("failed to read /etc/os-release: {}", e))?;
+    parse_rspm_distro(&content)
+}
+
 pub fn get_r_version() -> &'static str {
     static R_VERSION: OnceLock<String> = OnceLock::new();
     R_VERSION.get_or_init(|| {
@@ -253,6 +306,109 @@ pub fn download_and_install(
 mod tests {
     use super::*;
     use crate::index::Package;
+
+    // --- linux_rspm_distro / parse_rspm_distro tests ---
+
+    fn os_release(id: &str, version_id: &str) -> String {
+        format!("ID={}\nVERSION_ID={}\n", id, version_id)
+    }
+
+    #[test]
+    fn test_rhel8_maps_to_rhel8() {
+        assert_eq!(parse_rspm_distro(&os_release("rhel", "8.9")).unwrap(), "rhel8");
+    }
+
+    #[test]
+    fn test_rhel9_maps_to_rhel9() {
+        assert_eq!(parse_rspm_distro(&os_release("rhel", "9.3")).unwrap(), "rhel9");
+    }
+
+    #[test]
+    fn test_rocky8_maps_to_rhel8() {
+        assert_eq!(parse_rspm_distro(&os_release("rocky", "8.9")).unwrap(), "rhel8");
+    }
+
+    #[test]
+    fn test_rocky9_maps_to_rhel9() {
+        assert_eq!(parse_rspm_distro(&os_release("rocky", "9.3")).unwrap(), "rhel9");
+    }
+
+    #[test]
+    fn test_almalinux8_maps_to_rhel8() {
+        assert_eq!(parse_rspm_distro(&os_release("almalinux", "8.9")).unwrap(), "rhel8");
+    }
+
+    #[test]
+    fn test_almalinux9_maps_to_rhel9() {
+        assert_eq!(parse_rspm_distro(&os_release("almalinux", "9.3")).unwrap(), "rhel9");
+    }
+
+    #[test]
+    fn test_centos8_maps_to_rhel8() {
+        assert_eq!(parse_rspm_distro(&os_release("centos", "8")).unwrap(), "rhel8");
+    }
+
+    #[test]
+    fn test_centos9_maps_to_rhel9() {
+        assert_eq!(parse_rspm_distro(&os_release("centos", "9")).unwrap(), "rhel9");
+    }
+
+    #[test]
+    fn test_ubuntu_jammy_maps_correctly() {
+        assert_eq!(
+            parse_rspm_distro(&os_release("ubuntu", "22.04")).unwrap(),
+            "ubuntu-jammy"
+        );
+    }
+
+    #[test]
+    fn test_ubuntu_focal_maps_correctly() {
+        assert_eq!(
+            parse_rspm_distro(&os_release("ubuntu", "20.04")).unwrap(),
+            "ubuntu-focal"
+        );
+    }
+
+    #[test]
+    fn test_ubuntu_noble_maps_correctly() {
+        assert_eq!(
+            parse_rspm_distro(&os_release("ubuntu", "24.04")).unwrap(),
+            "ubuntu-noble"
+        );
+    }
+
+    #[test]
+    fn test_sles_returns_error() {
+        let result = parse_rspm_distro(&os_release("sles", "15.5"));
+        assert!(result.is_err(), "SLES should return an error");
+        assert!(result.unwrap_err().contains("SLES"));
+    }
+
+    #[test]
+    fn test_opensuse_leap_returns_error() {
+        let result = parse_rspm_distro(&os_release("opensuse-leap", "15.5"));
+        assert!(result.is_err(), "openSUSE Leap should return an error");
+    }
+
+    #[test]
+    fn test_unsupported_distro_returns_error() {
+        let result = parse_rspm_distro(&os_release("arch", "rolling"));
+        assert!(result.is_err());
+        let msg = result.unwrap_err();
+        assert!(msg.contains("arch"), "error should name the distro: {}", msg);
+    }
+
+    #[test]
+    fn test_quoted_values_are_parsed() {
+        let content = "ID=\"rocky\"\nVERSION_ID=\"9.3\"\n";
+        assert_eq!(parse_rspm_distro(content).unwrap(), "rhel9");
+    }
+
+    #[test]
+    fn test_missing_id_returns_error() {
+        let result = parse_rspm_distro("VERSION_ID=9.3\n");
+        assert!(result.is_err());
+    }
 
     fn make_index(entries: &[(&str, &str)]) -> HashMap<String, Package> {
         entries
