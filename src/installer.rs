@@ -1,6 +1,5 @@
 use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
 use crate::index::Package;
-use flate2::read::GzDecoder;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -28,7 +27,11 @@ pub fn get_platform() -> (&'static str, &'static str) {
             let distro = linux_rspm_distro();
             (format!("linux/{}", distro), "tar.gz".to_string())
         }
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        #[cfg(target_os = "windows")]
+        {
+            ("windows".to_string(), "zip".to_string())
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         {
             panic!("Unsupported OS for RSPM package downloads");
         }
@@ -203,6 +206,39 @@ pub fn build_urls(
         .collect()
 }
 
+/// Extracts a downloaded package archive into packages_dir.
+/// On Windows: uses zip extraction. On other platforms: uses gzip+tar.
+fn extract_package(bytes: &[u8], packages_dir: &Path, name: &str, version: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::io::Cursor;
+        zip::ZipArchive::new(Cursor::new(bytes))
+            .and_then(|mut archive| archive.extract(packages_dir))
+            .unwrap_or_else(|e| {
+                eprintln!(
+                    "\nerror: failed to extract {} {}: {}\n       \
+                     The downloaded file may not be a valid binary package.",
+                    name, version, e
+                );
+                std::process::exit(1);
+            });
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        use flate2::read::GzDecoder;
+        let decoder = GzDecoder::new(bytes);
+        let mut archive = tar::Archive::new(decoder);
+        archive.unpack(packages_dir).unwrap_or_else(|e| {
+            eprintln!(
+                "\nerror: failed to extract {} {}: {}\n       \
+                 The downloaded file may not be a valid binary package.",
+                name, version, e
+            );
+            std::process::exit(1);
+        });
+    }
+}
+
 /// Reads installed packages from a library dir by parsing each DESCRIPTION file.
 /// Returns a map of package name → installed version.
 fn read_installed(lib_dir: &Path) -> HashMap<String, String> {
@@ -344,16 +380,7 @@ pub fn download_and_install(
         // extract to cache: unpacks {name}/ into packages dir, then rename to {name}_{version}/
         let packages_dir = cache_dir().join("packages");
         std::fs::create_dir_all(&packages_dir).unwrap();
-        let decoder = GzDecoder::new(bytes.as_slice());
-        let mut archive = tar::Archive::new(decoder);
-        archive.unpack(&packages_dir).unwrap_or_else(|e| {
-            eprintln!(
-                "\nerror: failed to extract {} {}: {}\n       \
-                 The downloaded file may not be a valid binary package.",
-                name, version, e
-            );
-            std::process::exit(1);
-        });
+        extract_package(&bytes, &packages_dir, name, version);
         std::fs::rename(packages_dir.join(name), package_cache_path(name, version)).unwrap();
 
         // hard-link from cache into project library
