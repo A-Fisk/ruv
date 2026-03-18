@@ -41,7 +41,12 @@ enum Commands {
         package: String,
     },
     /// Install from ruv.lock (error if lockfile missing or stale)
-    Sync,
+    Sync {
+        /// Skip downloads and use the existing library as-is (for HPC/offline environments).
+        /// Errors if the library directory does not exist yet.
+        #[arg(long)]
+        offline: bool,
+    },
     /// Resolve dependencies from ruv.toml and write ruv.lock
     Lock,
     /// Add a package to ruv.toml and sync
@@ -149,7 +154,7 @@ fn main() {
             write_lockfile(&root_names, &resolved, &index);
         }
 
-        Commands::Sync => {
+        Commands::Sync { offline } => {
             let config = read_config().unwrap_or_else(|e| {
                 eprintln!("error: {e}");
                 std::process::exit(1);
@@ -164,6 +169,25 @@ fn main() {
             if !lockfile_is_fresh(&roots) {
                 eprintln!("error: ruv.lock is missing or out of date — run `ruv lock` first");
                 std::process::exit(1);
+            }
+
+            if offline {
+                if std::path::Path::new(LIB_DIR).exists() {
+                    println!("Offline mode: using existing library at {}", LIB_DIR);
+                    return;
+                } else {
+                    eprintln!(
+                        "error: --offline requires an existing library at {}",
+                        LIB_DIR
+                    );
+                    eprintln!(
+                        "       On HPC systems, populate the library on a supported system first:"
+                    );
+                    eprintln!("         1. Run `ruv sync` on a machine with internet access");
+                    eprintln!("         2. Copy the {} directory to the HPC node", LIB_DIR);
+                    eprintln!("         3. Run `ruv sync --offline` on the HPC node");
+                    std::process::exit(1);
+                }
             }
 
             let t = Instant::now();
