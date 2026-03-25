@@ -216,10 +216,14 @@ fn main() {
                 );
             }
 
-            if let Some(constraint) = &config.project.r_version {
-                let installation = r_version::select_r(constraint).or_else(|_| {
+            let constraint = r_version::resolve_r_constraint(config.project.r_version.as_deref());
+            if let Some(constraint) = constraint {
+                if r_version::read_r_version_file().is_some() {
+                    println!("Using r-version from .r-version file: {}", constraint);
+                }
+                let installation = r_version::select_r(&constraint).or_else(|_| {
                     println!("  R {} not found locally, downloading...", constraint);
-                    r_version::auto_install_r(constraint)
+                    r_version::auto_install_r(&constraint)
                 });
                 match installation {
                     Ok(inst) => {
