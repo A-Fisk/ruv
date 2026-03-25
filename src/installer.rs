@@ -115,11 +115,14 @@ fn make_url(
 }
 
 /// Returns (name, version, url) tuples from lockfile (name, version, registry) triples.
+/// `r_version_override` is the R version recorded in the lockfile (e.g. "4.4").
+/// If None (old lockfile format), falls back to the current system R version.
 pub fn build_urls_from_pairs(
     packages: &[(String, String, String)],
+    r_version_override: Option<&str>,
 ) -> Vec<(String, String, String)> {
     let (platform, ext) = get_platform();
-    let r_version = get_r_version();
+    let r_version = r_version_override.unwrap_or_else(|| get_r_version());
     packages
         .iter()
         .map(|(name, version, registry)| {
@@ -273,8 +276,10 @@ pub fn download_and_install(
             pb.finish_and_clear();
             eprintln!(
                 "\nerror: binary not available for {} {} (HTTP {})\n       \
-                 The package may not have a pre-built binary for your R version at this snapshot.\n       \
-                 URL: {}",
+                 URL: {}\n       \
+                 The lockfile was generated with a different R version than the one used at sync time,\n       \
+                 or RSPM does not yet have a pre-built binary for this package/R version combination.\n       \
+                 Fix: re-run `ruv lock` on the R version you want to use, then `ruv sync`.",
                 name,
                 version,
                 response.status(),
@@ -363,5 +368,40 @@ mod tests {
         let index = make_index(&[("ggplot2", "3.5.1")]);
         let urls = build_urls(&[], &index);
         assert!(urls.is_empty());
+    }
+
+    #[test]
+    fn test_build_urls_from_pairs_uses_override_r_version() {
+        let packages = vec![(
+            "ggplot2".to_string(),
+            "3.5.1".to_string(),
+            "https://packagemanager.posit.co/cran/latest".to_string(),
+        )];
+        let urls = build_urls_from_pairs(&packages, Some("4.4"));
+        assert_eq!(urls.len(), 1);
+        let (name, version, url) = &urls[0];
+        assert_eq!(name, "ggplot2");
+        assert_eq!(version, "3.5.1");
+        assert!(
+            url.contains("/contrib/4.4/"),
+            "URL should contain /contrib/4.4/, got: {}",
+            url
+        );
+        assert!(url.contains("ggplot2_3.5.1"));
+    }
+
+    #[test]
+    fn test_build_urls_from_pairs_override_differs_from_system_r() {
+        // Passing an explicit version should use that, not whatever R is on the system.
+        let packages = vec![(
+            "dplyr".to_string(),
+            "1.1.4".to_string(),
+            "https://packagemanager.posit.co/cran/latest".to_string(),
+        )];
+        let urls_44 = build_urls_from_pairs(&packages, Some("4.4"));
+        let urls_43 = build_urls_from_pairs(&packages, Some("4.3"));
+        assert!(urls_44[0].2.contains("/contrib/4.4/"));
+        assert!(urls_43[0].2.contains("/contrib/4.3/"));
+        assert_ne!(urls_44[0].2, urls_43[0].2);
     }
 }

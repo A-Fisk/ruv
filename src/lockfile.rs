@@ -1,4 +1,5 @@
 use crate::index::Package;
+use crate::installer::get_r_version;
 use crate::version::RVersion;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -9,6 +10,8 @@ const RSPM_BASE: &str = "https://packagemanager.posit.co/cran";
 /// Write ruv.lock from the pubgrub-resolved map of package → version.
 /// All packages use RSPM/latest as their registry — the exact version in the
 /// filename is the reproducibility guarantee, not the snapshot date.
+/// The R version used at lock time is recorded in [manifest] so sync can use
+/// the same version regardless of what R is on PATH at sync time.
 pub fn write_lockfile(
     roots: &[String],
     resolved: &HashMap<String, RVersion>,
@@ -27,8 +30,11 @@ fn write_lockfile_to(
     let mut sorted_roots = roots.to_vec();
     sorted_roots.sort();
 
+    let r_ver = get_r_version();
+
     let mut out = String::from("# ruv.lock — generated, do not edit\n\nversion = 1\n\n");
     out.push_str("[manifest]\n");
+    out.push_str(&format!("r_version = \"{}\"\n", r_ver));
     out.push_str("dependencies = [");
     out.push_str(
         &sorted_roots
@@ -87,6 +93,14 @@ pub fn read_lockfile() -> Vec<(String, String, String)> {
     let text =
         std::fs::read_to_string("ruv.lock").expect("no ruv.lock found — run `ruv lock` first");
     parse_lockfile(&text)
+}
+
+/// Reads the R version recorded in the [manifest] section of ruv.lock.
+/// Returns None if the lockfile predates r_version recording (older format).
+pub fn read_lockfile_r_version() -> Option<String> {
+    let text = std::fs::read_to_string("ruv.lock").ok()?;
+    let lf: LockfileHeader = toml::from_str(&text).ok()?;
+    lf.manifest.r_version
 }
 
 /// Returns true if the lockfile exists and its manifest deps match the given roots.
@@ -149,6 +163,8 @@ struct LockfileHeader {
 
 #[derive(Deserialize)]
 struct Manifest {
+    #[serde(default)]
+    r_version: Option<String>,
     dependencies: Vec<String>,
 }
 
@@ -262,5 +278,55 @@ mod tests {
         assert_eq!(parsed[0].2, "https://packagemanager.posit.co/cran/latest");
         assert_eq!(parsed[1].0, "rlang");
         assert_eq!(parsed[1].1, "1.1.4");
+    }
+
+    #[test]
+    fn test_write_lockfile_records_r_version() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let index = make_index(&[("ggplot2", "3.5.1")]);
+        let resolved = make_resolved(&[("ggplot2", "3.5.1")]);
+        let roots = vec!["ggplot2".to_string()];
+
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+
+        let contents = std::fs::read_to_string(tmp.path()).unwrap();
+        // r_version line should be present in [manifest] and be non-empty
+        assert!(contents.contains("r_version = \""));
+    }
+
+    #[test]
+    fn test_parse_r_version_from_lockfile() {
+        let text = r#"
+version = 1
+
+[manifest]
+r_version = "4.4"
+dependencies = ["ggplot2"]
+
+[[package]]
+name = "ggplot2"
+version = "3.5.1"
+source = { registry = "https://packagemanager.posit.co/cran/latest" }
+"#;
+        let lf: LockfileHeader = toml::from_str(text).unwrap();
+        assert_eq!(lf.manifest.r_version, Some("4.4".to_string()));
+    }
+
+    #[test]
+    fn test_parse_r_version_missing_is_none() {
+        // Old lockfile format without r_version field — should not fail to parse
+        let text = r#"
+version = 1
+
+[manifest]
+dependencies = ["ggplot2"]
+
+[[package]]
+name = "ggplot2"
+version = "3.5.1"
+source = { registry = "https://packagemanager.posit.co/cran/latest" }
+"#;
+        let lf: LockfileHeader = toml::from_str(text).unwrap();
+        assert_eq!(lf.manifest.r_version, None);
     }
 }
