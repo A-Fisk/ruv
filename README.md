@@ -10,7 +10,7 @@ R package management is slow, fragmented, and requires too many tools:
 
 - `install.packages()` — sequential, no caching, no lockfiles
 - `renv` — lockfiles but slow restoration, no binary cache
-- `pak` — faster installs but no lockfile or version management
+- `pak` — faster installs, global cache, and CI-oriented lockfiles, but no project-level reproducibility workflow or R version management
 - `rig` — R version management, but a separate tool
 
 `ruv` replaces all of them with a single fast binary.
@@ -90,9 +90,9 @@ ruv --verbose sync   # show per-package source (cache vs download)
 | | `install.packages` | `renv` | `pak` | **ruv** |
 |---|---|---|---|---|
 | Parallel downloads | ❌ | ❌ | ✅ | ✅ |
-| Global binary cache | ❌ | ❌ | ❌ | ✅ |
-| Lockfile | ❌ | ✅ | ❌ | ✅ |
-| Reproducible binary installs | ❌ | ⚠️ source only | ❌ | ✅ |
+| Global binary cache | ❌ | ❌ | ✅ | ✅ |
+| Lockfile | ❌ | ✅ | ⚠️ CI caching only | ✅ |
+| Reproducible binary installs | ❌ | ⚠️ source only | ⚠️ PPM snapshots only | ✅ |
 | Lock/sync separation | ❌ | ❌ | ❌ | ✅ |
 | R version management | ❌ | ❌ | ❌ | 🚧 planned |
 
