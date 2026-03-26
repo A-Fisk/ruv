@@ -8,6 +8,7 @@ mod index;
 mod installer;
 mod lockfile;
 mod r_version;
+mod renv_migrate;
 mod resolver;
 mod version;
 
@@ -60,10 +61,25 @@ enum Commands {
         /// Name of the package to remove
         package: String,
     },
+    /// Migrate an existing renv project to ruv
+    Migrate {
+        #[command(subcommand)]
+        source: MigrateSource,
+    },
     /// Run a script with the project library
     Run {
         /// Arguments to pass to Rscript (e.g. analysis.R or -e "library(ggplot2)")
         args: Vec<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum MigrateSource {
+    /// Migrate from an renv.lock file
+    Renv {
+        /// Path to the renv.lock file (defaults to ./renv.lock)
+        #[arg(default_value = "renv.lock")]
+        renv_file: String,
     },
 }
 
@@ -300,6 +316,49 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+
+        Commands::Migrate {
+            source: MigrateSource::Renv { renv_file },
+        } => {
+            let renv_path = std::path::Path::new(&renv_file);
+            let result = renv_migrate::parse_renv_lock(renv_path).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            });
+
+            let project_name = std::env::current_dir()
+                .ok()
+                .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "my-project".to_string());
+
+            println!(
+                "Migrating {} packages from {} (R {})...",
+                result.packages.len(),
+                renv_file,
+                result.r_version
+            );
+
+            if !result.skipped.is_empty() {
+                eprintln!(
+                    "warning: {} package(s) could not be migrated automatically:",
+                    result.skipped.len()
+                );
+                for (pkg, reason) in &result.skipped {
+                    eprintln!("  {} — {}", pkg, reason);
+                }
+            }
+
+            renv_migrate::write_ruv_toml(&project_name, &result).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            });
+            println!("wrote ruv.toml");
+
+            // Run lock to validate the migrated dependencies resolve correctly
+            run_lock(verbose);
+            println!("next: run `ruv sync` to install the project library");
         }
 
         Commands::Run { args } => {

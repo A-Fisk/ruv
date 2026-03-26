@@ -200,6 +200,8 @@ pub fn build_urls(
     build_urls_with(packages, index, platform, ext, get_r_version())
 }
 
+/// Testable inner implementation — takes platform/ext/r_version explicitly
+/// so tests can avoid invoking the real R binary.
 fn build_urls_with(
     packages: &[String],
     index: &HashMap<String, Package>,
