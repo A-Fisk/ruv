@@ -12,7 +12,8 @@ mod resolver;
 mod version;
 
 use config::{
-    AddDependencyResult, add_dependency, init_config, parse_dep, parse_dep_name, read_config,
+    AddDependencyResult, RemoveDependencyResult, add_dependency, init_config, parse_dep,
+    parse_dep_name, read_config, remove_dependency,
 };
 use index::fetch_cran_index;
 use installer::{build_urls, build_urls_from_pairs, download_and_install};
@@ -49,9 +50,14 @@ enum Commands {
     },
     /// Resolve dependencies from ruv.toml and write ruv.lock
     Lock,
-    /// Add a package to ruv.toml and sync
+    /// Add a package to ruv.toml and re-lock
     Add {
-        /// Name of the package to add
+        /// Name of the package to add (optionally with version constraint, e.g. ggplot2>=3.4)
+        package: String,
+    },
+    /// Remove a package from ruv.toml and re-lock
+    Remove {
+        /// Name of the package to remove
         package: String,
     },
     /// Run a script with the project library
@@ -67,6 +73,36 @@ fn fmt_duration(ms: u128) -> String {
     } else {
         format!("{:.2}s", ms as f64 / 1000.0)
     }
+}
+
+/// Reads ruv.toml, resolves all dependencies, writes ruv.lock, and prints progress.
+/// Exits the process on error.
+fn run_lock(verbose: bool) {
+    let config = read_config().unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    let root_deps: Vec<_> = config
+        .project
+        .dependencies
+        .iter()
+        .map(|d| parse_dep(d))
+        .collect();
+    let root_names: Vec<String> = root_deps.iter().map(|d| d.name.clone()).collect();
+
+    let t = Instant::now();
+    let index = fetch_cran_index();
+    let resolved = resolve_all(&root_deps, &index, verbose).unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    println!(
+        "Resolved {} packages in {}",
+        resolved.len(),
+        fmt_duration(t.elapsed().as_millis())
+    );
+
+    write_lockfile(&root_names, &resolved, &index);
 }
 
 fn main() {
@@ -127,31 +163,7 @@ fn main() {
         }
 
         Commands::Lock => {
-            let config = read_config().unwrap_or_else(|e| {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            });
-            let root_deps: Vec<_> = config
-                .project
-                .dependencies
-                .iter()
-                .map(|d| parse_dep(d))
-                .collect();
-            let root_names: Vec<String> = root_deps.iter().map(|d| d.name.clone()).collect();
-
-            let t = Instant::now();
-            let index = fetch_cran_index();
-            let resolved = resolve_all(&root_deps, &index, verbose).unwrap_or_else(|e| {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            });
-            println!(
-                "Resolved {} packages in {}",
-                resolved.len(),
-                fmt_duration(t.elapsed().as_millis())
-            );
-
-            write_lockfile(&root_names, &resolved, &index);
+            run_lock(verbose);
         }
 
         Commands::Sync { offline } => {
@@ -264,11 +276,28 @@ fn main() {
             }) {
                 AddDependencyResult::Added => {
                     println!("added \"{}\" to ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to install");
                 }
                 AddDependencyResult::AlreadyPresent => {
-                    println!("\"{}\" is already in ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    println!("\"{}\" is already in ruv.toml — nothing to do", package);
+                }
+            }
+        }
+
+        Commands::Remove { package } => {
+            match remove_dependency(&package).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }) {
+                RemoveDependencyResult::Removed => {
+                    println!("removed \"{}\" from ruv.toml", package);
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to apply");
+                }
+                RemoveDependencyResult::NotFound => {
+                    eprintln!("error: \"{}\" is not in ruv.toml", package);
+                    std::process::exit(1);
                 }
             }
         }
