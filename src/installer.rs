@@ -115,11 +115,14 @@ fn make_url(
 }
 
 /// Returns (name, version, url) tuples from lockfile (name, version, registry) triples.
+/// `r_version_override` is the R version recorded in the lockfile (e.g. "4.4").
+/// If None (old lockfile format), falls back to the current system R version.
 pub fn build_urls_from_pairs(
     packages: &[(String, String, String)],
+    r_version_override: Option<&str>,
 ) -> Vec<(String, String, String)> {
     let (platform, ext) = get_platform();
-    let r_version = get_r_version();
+    let r_version = r_version_override.unwrap_or_else(|| get_r_version());
     packages
         .iter()
         .map(|(name, version, registry)| {
@@ -141,8 +144,18 @@ pub fn build_urls(
     index: &HashMap<String, Package>,
 ) -> Vec<(String, String, String)> {
     let (platform, ext) = get_platform();
-    let r_version = get_r_version();
+    build_urls_with(packages, index, platform, ext, get_r_version())
+}
 
+/// Testable inner implementation — takes platform/ext/r_version explicitly
+/// so tests can avoid invoking the real R binary.
+fn build_urls_with(
+    packages: &[String],
+    index: &HashMap<String, Package>,
+    platform: &str,
+    ext: &str,
+    r_version: &str,
+) -> Vec<(String, String, String)> {
     packages
         .iter()
         .filter_map(|name| {
@@ -340,7 +353,13 @@ mod tests {
     #[test]
     fn test_build_urls_format() {
         let index = make_index(&[("ggplot2", "3.5.1")]);
-        let urls = build_urls(&["ggplot2".to_string()], &index);
+        let urls = build_urls_with(
+            &["ggplot2".to_string()],
+            &index,
+            "macosx/big-sur-arm64",
+            "tgz",
+            "4.4",
+        );
         assert_eq!(urls.len(), 1);
         let (name, version, url) = &urls[0];
         assert_eq!(name, "ggplot2");
@@ -353,7 +372,13 @@ mod tests {
     #[test]
     fn test_build_urls_drops_missing_packages() {
         let index = make_index(&[("ggplot2", "3.5.1")]);
-        let urls = build_urls(&["ggplot2".to_string(), "not-in-index".to_string()], &index);
+        let urls = build_urls_with(
+            &["ggplot2".to_string(), "not-in-index".to_string()],
+            &index,
+            "macosx/big-sur-arm64",
+            "tgz",
+            "4.4",
+        );
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0].0, "ggplot2");
     }
@@ -361,7 +386,7 @@ mod tests {
     #[test]
     fn test_build_urls_empty_input() {
         let index = make_index(&[("ggplot2", "3.5.1")]);
-        let urls = build_urls(&[], &index);
+        let urls = build_urls_with(&[], &index, "macosx/big-sur-arm64", "tgz", "4.4");
         assert!(urls.is_empty());
     }
 }
