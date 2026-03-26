@@ -1,6 +1,5 @@
 use crate::cache::{cache_dir, hard_link_into_library, is_cached, package_cache_path};
 use crate::index::Package;
-use flate2::read::GzDecoder;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -28,7 +27,11 @@ pub fn get_platform() -> (&'static str, &'static str) {
             let distro = linux_rspm_distro();
             (format!("linux/{}", distro), "tar.gz".to_string())
         }
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        #[cfg(target_os = "windows")]
+        {
+            ("windows".to_string(), "zip".to_string())
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         {
             panic!("Unsupported OS for RSPM package downloads");
         }
@@ -36,45 +39,95 @@ pub fn get_platform() -> (&'static str, &'static str) {
     (path.as_str(), ext.as_str())
 }
 
-/// Read /etc/os-release and map to an RSPM distro string.
-/// Falls back to "ubuntu-jammy" (Ubuntu 22.04) if unrecognised.
-#[cfg(target_os = "linux")]
-fn linux_rspm_distro() -> String {
-    let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+/// Parse /etc/os-release content and return the RSPM distro string.
+/// Separated from linux_rspm_distro() to enable testing without file I/O.
+fn parse_os_release(content: &str) -> String {
     let mut id = String::new();
-    let mut codename = String::new();
     let mut version_id = String::new();
+    let mut version_codename = String::new();
+    let mut ubuntu_codename = String::new();
+
     for line in content.lines() {
         if let Some(v) = line.strip_prefix("ID=") {
             id = v.trim_matches('"').to_lowercase();
-        } else if let Some(v) = line.strip_prefix("VERSION_CODENAME=") {
-            codename = v.trim_matches('"').to_lowercase();
         } else if let Some(v) = line.strip_prefix("VERSION_ID=") {
             version_id = v.trim_matches('"').to_string();
+        } else if let Some(v) = line.strip_prefix("VERSION_CODENAME=") {
+            version_codename = v.trim_matches('"').to_string();
+        } else if let Some(v) = line.strip_prefix("UBUNTU_CODENAME=") {
+            ubuntu_codename = v.trim_matches('"').to_string();
         }
     }
-    // Prefer codename (ubuntu: jammy, noble; debian: bullseye, bookworm)
-    if !codename.is_empty() && matches!(id.as_str(), "ubuntu" | "debian") {
-        return format!("{}-{}", id, codename);
-    }
-    // Fallback: map version_id for distros without VERSION_CODENAME
-    match (id.as_str(), version_id.as_str()) {
-        ("ubuntu", "22.04") => "ubuntu-jammy".to_string(),
-        ("ubuntu", "24.04") => "ubuntu-noble".to_string(),
-        ("ubuntu", "20.04") => "ubuntu-focal".to_string(),
-        ("debian", "11") => "debian-bullseye".to_string(),
-        ("debian", "12") => "debian-bookworm".to_string(),
-        ("rhel" | "centos", "7") => "centos7".to_string(),
-        ("rhel", "8") => "rhel8".to_string(),
-        ("rhel", "9") => "rhel9".to_string(),
+
+    match id.as_str() {
+        "ubuntu" => {
+            let codename = if !version_codename.is_empty() {
+                version_codename
+            } else if !ubuntu_codename.is_empty() {
+                ubuntu_codename
+            } else {
+                // fallback by version number
+                if version_id.starts_with("20.") {
+                    "focal".to_string()
+                } else if version_id.starts_with("22.") {
+                    "jammy".to_string()
+                } else if version_id.starts_with("24.") {
+                    "noble".to_string()
+                } else {
+                    eprintln!(
+                        "warning: unknown Ubuntu version '{}', defaulting to ubuntu-jammy",
+                        version_id
+                    );
+                    "jammy".to_string()
+                }
+            };
+            format!("ubuntu-{}", codename)
+        }
+        "debian" => match version_id.as_str() {
+            "11" => "debian-bullseye".to_string(),
+            "12" => "debian-bookworm".to_string(),
+            _ => {
+                eprintln!(
+                    "warning: unknown Debian version '{}', defaulting to ubuntu-jammy",
+                    version_id
+                );
+                "ubuntu-jammy".to_string()
+            }
+        },
+        "rhel" | "centos" | "rocky" | "almalinux" => {
+            let major = version_id.split('.').next().unwrap_or("8");
+            match major {
+                "9" => "rhel9".to_string(),
+                _ => "rhel8".to_string(),
+            }
+        }
+        id if id == "sles" || id == "sle_hpc" || id.starts_with("opensuse") => {
+            eprintln!("error: SLES/openSUSE is not supported by RSPM binary packages.");
+            eprintln!(
+                "       For HPC clusters, use `ruv sync --offline` with a pre-populated library."
+            );
+            eprintln!(
+                "       To populate the library on a supported system, run `ruv sync` there first,"
+            );
+            eprintln!("       then copy the .ruv/library directory to the HPC node.");
+            std::process::exit(1);
+        }
         _ => {
             eprintln!(
-                "warning: unrecognised Linux distro ({} {}), defaulting to ubuntu-jammy for RSPM",
-                id, version_id
+                "warning: unknown Linux distribution '{}', defaulting to ubuntu-jammy",
+                id
             );
             "ubuntu-jammy".to_string()
         }
     }
+}
+
+fn linux_rspm_distro() -> &'static str {
+    static DISTRO: OnceLock<String> = OnceLock::new();
+    DISTRO.get_or_init(|| {
+        let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+        parse_os_release(&content)
+    })
 }
 
 pub fn get_r_version() -> &'static str {
@@ -164,6 +217,39 @@ fn build_urls_with(
             Some((name.clone(), pkg.version.clone(), url))
         })
         .collect()
+}
+
+/// Extracts a downloaded package archive into packages_dir.
+/// On Windows: uses zip extraction. On other platforms: uses gzip+tar.
+fn extract_package(bytes: &[u8], packages_dir: &Path, name: &str, version: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::io::Cursor;
+        zip::ZipArchive::new(Cursor::new(bytes))
+            .and_then(|mut archive| archive.extract(packages_dir))
+            .unwrap_or_else(|e| {
+                eprintln!(
+                    "\nerror: failed to extract {} {}: {}\n       \
+                     The downloaded file may not be a valid binary package.",
+                    name, version, e
+                );
+                std::process::exit(1);
+            });
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        use flate2::read::GzDecoder;
+        let decoder = GzDecoder::new(bytes);
+        let mut archive = tar::Archive::new(decoder);
+        archive.unpack(packages_dir).unwrap_or_else(|e| {
+            eprintln!(
+                "\nerror: failed to extract {} {}: {}\n       \
+                 The downloaded file may not be a valid binary package.",
+                name, version, e
+            );
+            std::process::exit(1);
+        });
+    }
 }
 
 /// Reads installed packages from a library dir by parsing each DESCRIPTION file.
@@ -309,16 +395,7 @@ pub fn download_and_install(
         // extract to cache: unpacks {name}/ into packages dir, then rename to {name}_{version}/
         let packages_dir = cache_dir().join("packages");
         std::fs::create_dir_all(&packages_dir).unwrap();
-        let decoder = GzDecoder::new(bytes.as_slice());
-        let mut archive = tar::Archive::new(decoder);
-        archive.unpack(&packages_dir).unwrap_or_else(|e| {
-            eprintln!(
-                "\nerror: failed to extract {} {}: {}\n       \
-                 The downloaded file may not be a valid binary package.",
-                name, version, e
-            );
-            std::process::exit(1);
-        });
+        extract_package(&bytes, &packages_dir, name, version);
         std::fs::rename(packages_dir.join(name), package_cache_path(name, version)).unwrap();
 
         // hard-link from cache into project library
@@ -366,9 +443,21 @@ mod tests {
         let (name, version, url) = &urls[0];
         assert_eq!(name, "ggplot2");
         assert_eq!(version, "3.5.1");
-        assert!(url.contains("ggplot2_3.5.1"));
-        assert!(url.starts_with("https://packagemanager.posit.co/cran/latest/bin/"));
-        assert!(url.contains("/contrib/"));
+        assert!(
+            url.contains("ggplot2_3.5.1"),
+            "url should contain pkg_ver: {}",
+            url
+        );
+        assert!(
+            url.starts_with("https://packagemanager.posit.co/cran/latest"),
+            "url should start with RSPM base: {}",
+            url
+        );
+        assert!(
+            url.contains("/contrib/"),
+            "url should contain /contrib/: {}",
+            url
+        );
     }
 
     #[test]
@@ -390,6 +479,85 @@ mod tests {
         let index = make_index(&[("ggplot2", "3.5.1")]);
         let urls = build_urls_with(&[], &index, "macosx/big-sur-arm64", "tgz", "4.4");
         assert!(urls.is_empty());
+    }
+
+    fn test_parse_os_release_ubuntu_codename() {
+        let content = "ID=ubuntu\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n";
+        assert_eq!(parse_os_release(content), "ubuntu-jammy");
+    }
+
+    #[test]
+    fn test_parse_os_release_ubuntu_ubuntu_codename_field() {
+        // Some Ubuntu variants use UBUNTU_CODENAME instead of VERSION_CODENAME
+        let content = "ID=ubuntu\nVERSION_ID=\"22.04\"\nUBUNTU_CODENAME=jammy\n";
+        assert_eq!(parse_os_release(content), "ubuntu-jammy");
+    }
+
+    #[test]
+    fn test_parse_os_release_ubuntu_focal() {
+        let content = "ID=ubuntu\nVERSION_ID=\"20.04\"\n";
+        assert_eq!(parse_os_release(content), "ubuntu-focal");
+    }
+
+    #[test]
+    fn test_parse_os_release_ubuntu_noble() {
+        let content = "ID=ubuntu\nVERSION_ID=\"24.04\"\nVERSION_CODENAME=noble\n";
+        assert_eq!(parse_os_release(content), "ubuntu-noble");
+    }
+
+    #[test]
+    fn test_parse_os_release_debian_11() {
+        let content = "ID=debian\nVERSION_ID=\"11\"\n";
+        assert_eq!(parse_os_release(content), "debian-bullseye");
+    }
+
+    #[test]
+    fn test_parse_os_release_debian_12() {
+        let content = "ID=debian\nVERSION_ID=\"12\"\n";
+        assert_eq!(parse_os_release(content), "debian-bookworm");
+    }
+
+    #[test]
+    fn test_parse_os_release_rhel8() {
+        let content = "ID=\"rhel\"\nVERSION_ID=\"8.9\"\n";
+        assert_eq!(parse_os_release(content), "rhel8");
+    }
+
+    #[test]
+    fn test_parse_os_release_rhel9() {
+        let content = "ID=\"rhel\"\nVERSION_ID=\"9.2\"\n";
+        assert_eq!(parse_os_release(content), "rhel9");
+    }
+
+    #[test]
+    fn test_parse_os_release_rocky_linux() {
+        let content = "ID=\"rocky\"\nVERSION_ID=\"8.7\"\n";
+        assert_eq!(parse_os_release(content), "rhel8");
+    }
+
+    #[test]
+    fn test_parse_os_release_almalinux_9() {
+        let content = "ID=\"almalinux\"\nVERSION_ID=\"9.1\"\n";
+        assert_eq!(parse_os_release(content), "rhel9");
+    }
+
+    #[test]
+    fn test_parse_os_release_centos() {
+        let content = "ID=\"centos\"\nVERSION_ID=\"8\"\n";
+        assert_eq!(parse_os_release(content), "rhel8");
+    }
+
+    #[test]
+    fn test_parse_os_release_unknown_defaults_to_ubuntu_jammy() {
+        let content = "ID=arch\nVERSION_ID=\"2024.01.01\"\n";
+        assert_eq!(parse_os_release(content), "ubuntu-jammy");
+    }
+
+    #[test]
+    fn test_parse_os_release_quoted_id() {
+        // Some distros quote the ID field
+        let content = "ID=\"ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n";
+        assert_eq!(parse_os_release(content), "ubuntu-jammy");
     }
 
     #[test]

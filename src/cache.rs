@@ -42,7 +42,6 @@ fn hard_link_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
 mod tests {
     use super::*;
     use std::fs;
-    use std::os::unix::fs::MetadataExt;
 
     #[test]
     fn test_package_cache_path_format() {
@@ -68,8 +67,11 @@ mod tests {
         assert!(dst.join("subdir/nested.txt").exists());
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_hard_link_dir_creates_true_hard_links() {
+        use std::os::unix::fs::MetadataExt;
+
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path().join("src");
         let dst = tmp.path().join("dst");

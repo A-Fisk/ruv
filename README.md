@@ -8,10 +8,10 @@
 
 R package workflows often combine multiple tools:
 
-- `install.packages()` for direct installs
-- `renv` for project lockfiles
-- `pak` for fast dependency solving and installs
-- `rig` for R version management
+- `install.packages()` — sequential, no caching, no lockfiles
+- `renv` — lockfiles but slow restoration, no binary cache
+- `pak` — faster installs, global cache, and CI-oriented lockfiles, but no project-level reproducibility workflow or R version management
+- `rig` — R version management, but a separate tool
 
 `ruv` aims to provide a single fast CLI with lock/sync workflows and integrated R runtime selection.
 
@@ -125,6 +125,16 @@ ruv --verbose sync   # show per-package source (cache vs download)
 
 ## Comparison
 
+<<<<<<< HEAD
+| | `install.packages` | `renv` | `pak` | **ruv** |
+|---|---|---|---|---|
+| Parallel downloads | ❌ | ❌ | ✅ | ✅ |
+| Global binary cache | ❌ | ❌ | ✅ | ✅ |
+| Lockfile | ❌ | ✅ | ⚠️ CI caching only | ✅ |
+| Reproducible binary installs | ❌ | ⚠️ source only | ⚠️ PPM snapshots only | ✅ |
+| Lock/sync separation | ❌ | ❌ | ❌ | ✅ |
+| R version management | ❌ | ❌ | ❌ | 🚧 planned |
+=======
 Sourced from each tool's official documentation (as of Mar 2026). ⚠️ = partial or limited support.
 
 | | `install.packages` | `renv` | `pak` | `rv` | **ruv** |
@@ -149,6 +159,7 @@ Key differences based on their docs:
 - **Script runner**: `ruv run` launches R or Rscript with the project library set — `rv` has no equivalent execution wrapper.
 - **Lock workflow**: `rv` uses `plan`/`sync` (plan is a dry-run preview); `ruv` uses a separate `lock` step that writes the lockfile, then `sync` installs from it.
 - **Maturity**: `rv` is further along (v0.20, renv migration, sysdeps, shell activation). `ruv` is earlier-stage.
+>>>>>>> origin/docs/readme-quick-wins
 
 ## Status
 

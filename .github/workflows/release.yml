@@ -28,6 +28,8 @@ jobs:
             runs-on: ubuntu-latest
           - target: aarch64-unknown-linux-musl
             runs-on: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -55,17 +57,34 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-musl'
         run: cross build --release --target ${{ matrix.target }}
 
-      - name: Create tarball
+      - name: Create tarball (non-Windows)
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         run: |
           mkdir -p ruv-${{ matrix.target }}/bin
           cp target/${{ matrix.target }}/release/ruv ruv-${{ matrix.target }}/bin/
           tar czf ruv-${{ matrix.target }}.tar.gz ruv-${{ matrix.target }}/
 
-      - name: Upload artifacts
+      - name: Create zip (Windows)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ruv-${{ matrix.target }}/bin
+          Copy-Item target/${{ matrix.target }}/release/ruv.exe ruv-${{ matrix.target }}/bin/
+          Compress-Archive -Path ruv-${{ matrix.target }} -DestinationPath ruv-${{ matrix.target }}.zip
+
+      - name: Upload artifacts (non-Windows)
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         uses: actions/upload-artifact@v4
         with:
           name: ruv-${{ matrix.target }}
           path: ruv-${{ matrix.target }}.tar.gz
+
+      - name: Upload artifacts (Windows)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruv-${{ matrix.target }}
+          path: ruv-${{ matrix.target }}.zip
 
   publish:
     name: Publish Release
@@ -85,7 +104,9 @@ jobs:
         run: |
           mkdir -p release-assets
           find artifacts -name "*.tar.gz" -exec cp {} release-assets/ \;
+          find artifacts -name "*.zip" -exec cp {} release-assets/ \;
           cp scripts/install.sh release-assets/install.sh
+          cp scripts/install.ps1 release-assets/install.ps1
 
       - name: Upload binaries and installer to GitHub Release
         uses: softprops/action-gh-release@v1
@@ -93,6 +114,8 @@ jobs:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
           files: |
             release-assets/*.tar.gz
+            release-assets/*.zip
             release-assets/install.sh
+            release-assets/install.ps1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
