@@ -17,7 +17,13 @@ pub fn write_lockfile(
     resolved: &HashMap<String, RVersion>,
     index: &HashMap<String, Package>,
 ) {
-    write_lockfile_to(Path::new("ruv.lock"), roots, resolved, index);
+    write_lockfile_to(
+        Path::new("ruv.lock"),
+        roots,
+        resolved,
+        index,
+        get_r_version(),
+    );
     println!("wrote ruv.lock");
 }
 
@@ -26,15 +32,14 @@ fn write_lockfile_to(
     roots: &[String],
     resolved: &HashMap<String, RVersion>,
     index: &HashMap<String, Package>,
+    r_version: &str,
 ) {
     let mut sorted_roots = roots.to_vec();
     sorted_roots.sort();
 
-    let r_ver = get_r_version();
-
     let mut out = String::from("# ruv.lock — generated, do not edit\n\nversion = 1\n\n");
     out.push_str("[manifest]\n");
-    out.push_str(&format!("r_version = \"{}\"\n", r_ver));
+    out.push_str(&format!("r_version = \"{}\"\n", r_version));
     out.push_str("dependencies = [");
     out.push_str(
         &sorted_roots
@@ -203,11 +208,12 @@ mod tests {
         let resolved = make_resolved(&[("ggplot2", "3.5.1"), ("rlang", "1.1.4")]);
         let roots = vec!["ggplot2".to_string()];
 
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
 
         let contents = std::fs::read_to_string(tmp.path()).unwrap();
         assert!(contents.contains("version = 1"));
         assert!(contents.contains("[manifest]"));
+        assert!(contents.contains("r_version = \"4.4\""));
         assert!(contents.contains("dependencies = [\"ggplot2\"]"));
         assert!(contents.contains("[[package]]"));
         assert!(contents.contains("name = \"ggplot2\""));
@@ -221,7 +227,7 @@ mod tests {
         let resolved = make_resolved(&[("ggplot2", "3.5.1")]);
         let roots = vec!["ggplot2".to_string()];
 
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
 
         let contents = std::fs::read_to_string(tmp.path()).unwrap();
         assert!(
@@ -238,7 +244,7 @@ mod tests {
         let resolved = make_resolved(&[("nlme", "2.23-26")]);
         let roots = vec!["nlme".to_string()];
 
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
 
         let contents = std::fs::read_to_string(tmp.path()).unwrap();
         assert!(contents.contains("version = \"2.23-26\""));
@@ -252,12 +258,25 @@ mod tests {
         let resolved = make_resolved(&[("zzz", "1.0"), ("aaa", "2.0")]);
         let roots = vec!["zzz".to_string(), "aaa".to_string()];
 
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
 
         let contents = std::fs::read_to_string(tmp.path()).unwrap();
         let aaa_pos = contents.find("\"aaa\"").unwrap();
         let zzz_pos = contents.find("\"zzz\"").unwrap();
         assert!(aaa_pos < zzz_pos);
+    }
+
+    #[test]
+    fn test_write_lockfile_records_r_version() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let index = make_index(&[("ggplot2", "3.5.1")]);
+        let resolved = make_resolved(&[("ggplot2", "3.5.1")]);
+        let roots = vec!["ggplot2".to_string()];
+
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
+
+        let contents = std::fs::read_to_string(tmp.path()).unwrap();
+        assert!(contents.contains("r_version = \"4.4\""));
     }
 
     #[test]
@@ -267,7 +286,7 @@ mod tests {
         let resolved = make_resolved(&[("ggplot2", "3.5.1"), ("rlang", "1.1.4")]);
         let roots = vec!["ggplot2".to_string()];
 
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
+        write_lockfile_to(tmp.path(), &roots, &resolved, &index, "4.4");
 
         let text = std::fs::read_to_string(tmp.path()).unwrap();
         let mut parsed = parse_lockfile(&text);
@@ -278,20 +297,6 @@ mod tests {
         assert_eq!(parsed[0].2, "https://packagemanager.posit.co/cran/latest");
         assert_eq!(parsed[1].0, "rlang");
         assert_eq!(parsed[1].1, "1.1.4");
-    }
-
-    #[test]
-    fn test_write_lockfile_records_r_version() {
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        let index = make_index(&[("ggplot2", "3.5.1")]);
-        let resolved = make_resolved(&[("ggplot2", "3.5.1")]);
-        let roots = vec!["ggplot2".to_string()];
-
-        write_lockfile_to(tmp.path(), &roots, &resolved, &index);
-
-        let contents = std::fs::read_to_string(tmp.path()).unwrap();
-        // r_version line should be present in [manifest] and be non-empty
-        assert!(contents.contains("r_version = \""));
     }
 
     #[test]
