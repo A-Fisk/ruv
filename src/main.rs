@@ -13,7 +13,8 @@ mod resolver;
 mod version;
 
 use config::{
-    AddDependencyResult, add_dependency, init_config, parse_dep, parse_dep_name, read_config,
+    AddDependencyResult, RemoveDependencyResult, add_dependency, init_config, parse_dep,
+    parse_dep_name, read_config, remove_dependency,
 };
 use index::fetch_cran_index;
 use installer::{build_urls, build_urls_from_pairs, download_and_install};
@@ -45,9 +46,14 @@ enum Commands {
     Sync,
     /// Resolve dependencies from ruv.toml and write ruv.lock
     Lock,
-    /// Add a package to ruv.toml and sync
+    /// Add a package to ruv.toml and re-lock
     Add {
-        /// Name of the package to add
+        /// Name of the package to add (optionally with version constraint, e.g. ggplot2>=3.4)
+        package: String,
+    },
+    /// Remove a package from ruv.toml and re-lock
+    Remove {
+        /// Name of the package to remove
         package: String,
     },
     /// Migrate an existing renv project to ruv
@@ -226,10 +232,14 @@ fn main() {
                 );
             }
 
-            if let Some(constraint) = &config.project.r_version {
-                let installation = r_version::select_r(constraint).or_else(|_| {
+            let constraint = r_version::resolve_r_constraint(config.project.r_version.as_deref());
+            if let Some(constraint) = constraint {
+                if r_version::read_r_version_file().is_some() {
+                    println!("Using r-version from .r-version file: {}", constraint);
+                }
+                let installation = r_version::select_r(&constraint).or_else(|_| {
                     println!("  R {} not found locally, downloading...", constraint);
-                    r_version::auto_install_r(constraint)
+                    r_version::auto_install_r(&constraint)
                 });
                 match installation {
                     Ok(inst) => {
@@ -258,11 +268,28 @@ fn main() {
             }) {
                 AddDependencyResult::Added => {
                     println!("added \"{}\" to ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to install");
                 }
                 AddDependencyResult::AlreadyPresent => {
-                    println!("\"{}\" is already in ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    println!("\"{}\" is already in ruv.toml — nothing to do", package);
+                }
+            }
+        }
+
+        Commands::Remove { package } => {
+            match remove_dependency(&package).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }) {
+                RemoveDependencyResult::Removed => {
+                    println!("removed \"{}\" from ruv.toml", package);
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to apply");
+                }
+                RemoveDependencyResult::NotFound => {
+                    eprintln!("error: \"{}\" is not in ruv.toml", package);
+                    std::process::exit(1);
                 }
             }
         }

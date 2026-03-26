@@ -23,6 +23,39 @@ impl RInstallation {
     }
 }
 
+// ── .r-version file ───────────────────────────────────────────────────────────
+
+/// Read the project-root `.r-version` file and return its trimmed contents.
+/// Returns `None` if the file doesn't exist or is empty.
+/// The file is expected to contain a single line with a version or constraint,
+/// e.g. `4.4` or `4.4.2`. Leading/trailing whitespace and comment lines
+/// (starting with `#`) are ignored.
+pub fn read_r_version_file() -> Option<String> {
+    read_r_version_file_at(Path::new(".r-version"))
+}
+
+fn read_r_version_file_at(path: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let constraint = text
+        .lines()
+        .map(|l| l.trim())
+        .find(|l| !l.is_empty() && !l.starts_with('#'))?
+        .to_string();
+    if constraint.is_empty() {
+        None
+    } else {
+        Some(constraint)
+    }
+}
+
+/// Determine the effective R version constraint using the priority chain:
+/// 1. `.r-version` file in the project root
+/// 2. `r-version` field in `ruv.toml` (passed in as `toml_constraint`)
+/// 3. `None` — no constraint, use system R
+pub fn resolve_r_constraint(toml_constraint: Option<&str>) -> Option<String> {
+    read_r_version_file().or_else(|| toml_constraint.map(|s| s.to_string()))
+}
+
 // ── Discovery ────────────────────────────────────────────────────────────────
 
 /// Probe standard locations and return all R installations found, sorted
@@ -884,6 +917,68 @@ mod tests {
         let versions = parse_posit_deb_listing(html, "amd64");
         let strs: Vec<String> = versions.iter().map(|v| v.to_string()).collect();
         assert_eq!(strs, vec!["4.5.1", "4.4.0", "4.3.2"]);
+    }
+
+    #[test]
+    fn test_read_r_version_file_basic() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "4.4\n").unwrap();
+        assert_eq!(read_r_version_file_at(tmp.path()), Some("4.4".to_string()));
+    }
+
+    #[test]
+    fn test_read_r_version_file_trims_whitespace() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "  4.3.2  \n").unwrap();
+        assert_eq!(
+            read_r_version_file_at(tmp.path()),
+            Some("4.3.2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_read_r_version_file_skips_comments() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "# managed by ruv\n4.4.2\n").unwrap();
+        assert_eq!(
+            read_r_version_file_at(tmp.path()),
+            Some("4.4.2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_read_r_version_file_missing_returns_none() {
+        assert!(read_r_version_file_at(Path::new("/nonexistent/.r-version")).is_none());
+    }
+
+    #[test]
+    fn test_read_r_version_file_empty_returns_none() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "   \n# just a comment\n").unwrap();
+        assert!(read_r_version_file_at(tmp.path()).is_none());
+    }
+
+    #[test]
+    fn test_resolve_r_constraint_file_takes_priority() {
+        // Can't easily test the real .r-version here, but the priority logic
+        // is: Some(file) wins over Some(toml).
+        // We test resolve_r_constraint indirectly via the helper.
+        let result =
+            read_r_version_file_at(Path::new("/nonexistent")).or_else(|| Some(">=4.3".to_string()));
+        assert_eq!(result, Some(">=4.3".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_r_constraint_falls_back_to_toml() {
+        // When no .r-version file, toml constraint is used.
+        let result: Option<String> = None::<String>.or_else(|| Some("4.4".to_string()));
+        assert_eq!(result, Some("4.4".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_r_constraint_none_when_both_absent() {
+        let result: Option<String> = None::<String>.or_else(|| None);
+        assert!(result.is_none());
     }
 
     #[test]

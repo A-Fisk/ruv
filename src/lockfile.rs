@@ -298,4 +298,40 @@ mod tests {
         assert_eq!(parsed[1].0, "rlang");
         assert_eq!(parsed[1].1, "1.1.4");
     }
+
+    #[test]
+    fn test_parse_r_version_from_lockfile() {
+        let text = r#"
+version = 1
+
+[manifest]
+r_version = "4.4"
+dependencies = ["ggplot2"]
+
+[[package]]
+name = "ggplot2"
+version = "3.5.1"
+source = { registry = "https://packagemanager.posit.co/cran/latest" }
+"#;
+        let lf: LockfileHeader = toml::from_str(text).unwrap();
+        assert_eq!(lf.manifest.r_version, Some("4.4".to_string()));
+    }
+
+    #[test]
+    fn test_parse_r_version_missing_is_none() {
+        // Old lockfile format without r_version field — should not fail to parse
+        let text = r#"
+version = 1
+
+[manifest]
+dependencies = ["ggplot2"]
+
+[[package]]
+name = "ggplot2"
+version = "3.5.1"
+source = { registry = "https://packagemanager.posit.co/cran/latest" }
+"#;
+        let lf: LockfileHeader = toml::from_str(text).unwrap();
+        assert_eq!(lf.manifest.r_version, None);
+    }
 }
