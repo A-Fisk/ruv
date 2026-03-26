@@ -16,7 +16,7 @@ use config::{
 };
 use index::fetch_cran_index;
 use installer::{build_urls, build_urls_from_pairs, download_and_install};
-use lockfile::{lockfile_is_fresh, read_lockfile, write_lockfile};
+use lockfile::{lockfile_is_fresh, read_lockfile, read_lockfile_r_version, write_lockfile};
 use resolver::{resolve, resolve_all};
 
 const LIB_DIR: &str = ".ruv/library";
@@ -192,7 +192,14 @@ fn main() {
 
             let t = Instant::now();
             let locked = read_lockfile();
-            let packages = build_urls_from_pairs(&locked);
+            let lock_r_version = read_lockfile_r_version();
+            if lock_r_version.is_none() {
+                eprintln!(
+                    "warning: ruv.lock does not record an R version (old format) — \
+                     using system R for binary URLs. Re-run `ruv lock` to fix."
+                );
+            }
+            let packages = build_urls_from_pairs(&locked, lock_r_version.as_deref());
             println!(
                 "Resolved {} packages in {}",
                 locked.len(),
