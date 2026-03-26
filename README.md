@@ -6,14 +6,14 @@
 
 ## Motivation
 
-R package management is slow, fragmented, and requires too many tools:
+R package workflows often combine multiple tools:
 
 - `install.packages()` — sequential, no caching, no lockfiles
 - `renv` — lockfiles but slow restoration, no binary cache
-- `pak` — faster installs but no lockfile or version management
+- `pak` — faster installs, global cache, and CI-oriented lockfiles, but no project-level reproducibility workflow or R version management
 - `rig` — R version management, but a separate tool
 
-`ruv` replaces all of them with a single fast binary.
+`ruv` aims to provide a single fast CLI with lock/sync workflows and integrated R runtime selection.
 
 ## Goals
 
@@ -35,6 +35,12 @@ export PATH="$HOME/.local/bin:$PATH"
 ```
 
 For manual downloads, see the [releases page](https://github.com/A-Fisk/ruv/releases).
+
+To build from source (requires Rust):
+
+```sh
+cargo install --path .
+```
 
 ## Usage
 
@@ -68,6 +74,9 @@ ruv sync
 # Install a package and its dependencies (without modifying ruv.toml)
 ruv install ggplot2
 
+# Launch an interactive R console with the project library
+ruv run R
+
 # Run a script using the project library
 ruv run Rscript analysis.R
 ruv run -- -e "library(ggplot2)"
@@ -88,6 +97,21 @@ ruv sync
 ruv sync
 ```
 
+### Development workflow
+
+```sh
+# Build and run the CLI while developing
+cargo run -- init
+cargo run -- lock
+cargo run -- sync
+cargo run -- run R
+
+# Run test suite
+cargo test
+```
+
+For local manual testing with a real dependency set, see `project_docs/dev_testing.md`.
+
 ### Flags
 
 ```sh
@@ -101,14 +125,41 @@ ruv --verbose sync   # show per-package source (cache vs download)
 
 ## Comparison
 
+<<<<<<< HEAD
 | | `install.packages` | `renv` | `pak` | **ruv** |
 |---|---|---|---|---|
 | Parallel downloads | ❌ | ❌ | ✅ | ✅ |
-| Global binary cache | ❌ | ❌ | ❌ | ✅ |
-| Lockfile | ❌ | ✅ | ❌ | ✅ |
-| Reproducible binary installs | ❌ | ⚠️ source only | ❌ | ✅ |
+| Global binary cache | ❌ | ❌ | ✅ | ✅ |
+| Lockfile | ❌ | ✅ | ⚠️ CI caching only | ✅ |
+| Reproducible binary installs | ❌ | ⚠️ source only | ⚠️ PPM snapshots only | ✅ |
 | Lock/sync separation | ❌ | ❌ | ❌ | ✅ |
 | R version management | ❌ | ❌ | ❌ | 🚧 planned |
+=======
+Sourced from each tool's official documentation (as of Mar 2026). ⚠️ = partial or limited support.
+
+| | `install.packages` | `renv` | `pak` | `rv` | **ruv** |
+|---|---|---|---|---|---|
+| Lockfile | ❌ | ✅ | ✅ [`lockfile_create`](https://pak.r-lib.org/reference/lockfile_create.html) | ✅ | ✅ |
+| Explicit lock + sync commands | ❌ | ❌ | ⚠️ separate functions | ✅ `plan`/`sync` | ✅ `lock`/`sync` |
+| Global package cache | ❌ | ✅ | ✅ | ✅ (v0.18+) | ✅ |
+| Fast parallel installs | ❌ | ⚠️ | ✅ | ✅ | ✅ |
+| `r_version` in project config | ❌ | ❌ | ❌ | ✅ (selects installed R) | ✅ (selects + downloads R) |
+| `ruv run` / script runner | ❌ | ❌ | ❌ | ❌ | ✅ |
+| renv migration | ❌ | n/a | ❌ | ✅ `migrate renv` | 🚧 planned |
+| System dependency hints | ❌ | ✅ `sysreqs()` | ✅ | ✅ `sysdeps` | 🚧 planned |
+| Single binary, no R required to install | n/a | n/a | n/a | ✅ | ✅ |
+
+## ruv vs rv
+
+[`rv`](https://github.com/A2-ai/rv) is the closest comparison to `ruv` — both are Rust-based R package managers with lockfiles, global caches, and `r_version` support.
+
+Key differences based on their docs:
+
+- **R runtime**: `rv` selects an already-installed R matching `r_version`; `ruv` can also download and install R automatically if it isn't found.
+- **Script runner**: `ruv run` launches R or Rscript with the project library set — `rv` has no equivalent execution wrapper.
+- **Lock workflow**: `rv` uses `plan`/`sync` (plan is a dry-run preview); `ruv` uses a separate `lock` step that writes the lockfile, then `sync` installs from it.
+- **Maturity**: `rv` is further along (v0.20, renv migration, sysdeps, shell activation). `ruv` is earlier-stage.
+>>>>>>> origin/docs/readme-quick-wins
 
 ## Status
 

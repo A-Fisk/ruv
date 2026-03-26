@@ -49,6 +49,11 @@ pub enum AddDependencyResult {
     AlreadyPresent,
 }
 
+pub enum RemoveDependencyResult {
+    Removed,
+    NotFound,
+}
+
 pub fn add_dependency(dep: &str) -> Result<AddDependencyResult, String> {
     let text = std::fs::read_to_string(CONFIG_FILE).map_err(|e| {
         if e.kind() == ErrorKind::NotFound {
@@ -68,6 +73,86 @@ pub fn add_dependency(dep: &str) -> Result<AddDependencyResult, String> {
     } else {
         Ok(AddDependencyResult::AlreadyPresent)
     }
+}
+
+pub fn remove_dependency(dep: &str) -> Result<RemoveDependencyResult, String> {
+    let text = std::fs::read_to_string(CONFIG_FILE).map_err(|e| {
+        if e.kind() == ErrorKind::NotFound {
+            format!(
+                "could not find {} in this directory — run `ruv init` first",
+                CONFIG_FILE
+            )
+        } else {
+            format!("failed to read {}: {}", CONFIG_FILE, e)
+        }
+    })?;
+    let (updated, removed) = remove_dependency_from_toml_text(&text, dep)?;
+    if !removed {
+        return Ok(RemoveDependencyResult::NotFound);
+    }
+    std::fs::write(CONFIG_FILE, updated)
+        .map_err(|e| format!("failed to write {}: {}", CONFIG_FILE, e))?;
+    Ok(RemoveDependencyResult::Removed)
+}
+
+fn remove_dependency_from_toml_text(text: &str, dep: &str) -> Result<(String, bool), String> {
+    let root: toml::Value =
+        toml::from_str(text).map_err(|e| format!("failed to parse {}: {}", CONFIG_FILE, e))?;
+    let deps_array = root
+        .get("project")
+        .and_then(|v| v.get("dependencies"))
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| {
+            format!(
+                "invalid {}: missing [project].dependencies array",
+                CONFIG_FILE
+            )
+        })?;
+    let existing: Vec<String> = deps_array
+        .iter()
+        .map(|v| {
+            v.as_str().map(|s| s.to_string()).ok_or_else(|| {
+                format!(
+                    "invalid {}: dependencies entries must be strings",
+                    CONFIG_FILE
+                )
+            })
+        })
+        .collect::<Result<_, _>>()?;
+
+    let target_name = parse_dep_name(dep);
+    let found = existing.iter().any(|e| parse_dep_name(e) == target_name);
+    if !found {
+        return Ok((text.to_string(), false));
+    }
+
+    let remaining: Vec<String> = existing
+        .into_iter()
+        .filter(|e| parse_dep_name(e) != target_name)
+        .collect();
+
+    let (body_start, body_end) = find_project_body_range(text)?;
+    let dep_field = find_dependencies_field(text, body_start, body_end).ok_or_else(|| {
+        format!(
+            "invalid {}: missing [project].dependencies array",
+            CONFIG_FILE
+        )
+    })?;
+
+    let key_indent = &text[dep_field.key_indent_start..dep_field.key_indent_end];
+    let item_indent = if text[dep_field.open_bracket..=dep_field.close_bracket].contains('\n') {
+        infer_item_indent(text, dep_field.open_bracket, dep_field.close_bracket)
+            .unwrap_or_else(|| format!("{}    ", key_indent))
+    } else {
+        format!("{}    ", key_indent)
+    };
+
+    let replacement = render_dependencies_array(&remaining, true, key_indent, &item_indent);
+    let mut out = String::with_capacity(text.len());
+    out.push_str(&text[..dep_field.open_bracket]);
+    out.push_str(&replacement);
+    out.push_str(&text[dep_field.close_bracket + 1..]);
+    Ok((out, true))
 }
 
 fn default_config_toml(project_name: &str) -> String {
@@ -473,6 +558,43 @@ mod tests {
     fn test_parse_dep_name_preserves_dots_and_dashes() {
         assert_eq!(parse_dep_name("data.table"), "data.table");
         assert_eq!(parse_dep_name("R6"), "R6");
+    }
+
+    #[test]
+    fn test_remove_dependency_basic() {
+        let text = "[project]\nname = \"x\"\nversion = \"0.1.0\"\ndependencies = [\n    \"ggplot2\",\n    \"dplyr\",\n]\n";
+        let (updated, removed) = remove_dependency_from_toml_text(text, "ggplot2").unwrap();
+        assert!(removed);
+        assert!(!updated.contains("\"ggplot2\""));
+        assert!(updated.contains("\"dplyr\""));
+    }
+
+    #[test]
+    fn test_remove_dependency_not_found() {
+        let text =
+            "[project]\nname = \"x\"\nversion = \"0.1.0\"\ndependencies = [\n    \"ggplot2\",\n]\n";
+        let (updated, removed) = remove_dependency_from_toml_text(text, "dplyr").unwrap();
+        assert!(!removed);
+        assert_eq!(updated, text);
+    }
+
+    #[test]
+    fn test_remove_dependency_last_item_leaves_empty_array() {
+        let text =
+            "[project]\nname = \"x\"\nversion = \"0.1.0\"\ndependencies = [\n    \"ggplot2\",\n]\n";
+        let (updated, removed) = remove_dependency_from_toml_text(text, "ggplot2").unwrap();
+        assert!(removed);
+        assert!(!updated.contains("\"ggplot2\""));
+        assert!(updated.contains("dependencies = [\n]"));
+    }
+
+    #[test]
+    fn test_remove_dependency_matches_by_name_ignores_constraint() {
+        let text = "[project]\nname = \"x\"\nversion = \"0.1.0\"\ndependencies = [\n    \"ggplot2>=3.4\",\n    \"dplyr\",\n]\n";
+        let (updated, removed) = remove_dependency_from_toml_text(text, "ggplot2").unwrap();
+        assert!(removed);
+        assert!(!updated.contains("ggplot2"));
+        assert!(updated.contains("\"dplyr\""));
     }
 
     #[test]

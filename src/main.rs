@@ -8,15 +8,17 @@ mod index;
 mod installer;
 mod lockfile;
 mod r_version;
+mod renv_migrate;
 mod resolver;
 mod version;
 
 use config::{
-    AddDependencyResult, add_dependency, init_config, parse_dep, parse_dep_name, read_config,
+    AddDependencyResult, RemoveDependencyResult, add_dependency, init_config, parse_dep,
+    parse_dep_name, read_config, remove_dependency,
 };
 use index::fetch_cran_index;
 use installer::{build_urls, build_urls_from_pairs, download_and_install};
-use lockfile::{lockfile_is_fresh, read_lockfile, write_lockfile};
+use lockfile::{lockfile_is_fresh, read_lockfile, read_lockfile_r_version, write_lockfile};
 use resolver::{resolve, resolve_all};
 
 const LIB_DIR: &str = ".ruv/library";
@@ -49,15 +51,35 @@ enum Commands {
     },
     /// Resolve dependencies from ruv.toml and write ruv.lock
     Lock,
-    /// Add a package to ruv.toml and sync
+    /// Add a package to ruv.toml and re-lock
     Add {
-        /// Name of the package to add
+        /// Name of the package to add (optionally with version constraint, e.g. ggplot2>=3.4)
         package: String,
+    },
+    /// Remove a package from ruv.toml and re-lock
+    Remove {
+        /// Name of the package to remove
+        package: String,
+    },
+    /// Migrate an existing renv project to ruv
+    Migrate {
+        #[command(subcommand)]
+        source: MigrateSource,
     },
     /// Run a script with the project library
     Run {
         /// Arguments to pass to Rscript (e.g. analysis.R or -e "library(ggplot2)")
         args: Vec<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum MigrateSource {
+    /// Migrate from an renv.lock file
+    Renv {
+        /// Path to the renv.lock file (defaults to ./renv.lock)
+        #[arg(default_value = "renv.lock")]
+        renv_file: String,
     },
 }
 
@@ -67,6 +89,36 @@ fn fmt_duration(ms: u128) -> String {
     } else {
         format!("{:.2}s", ms as f64 / 1000.0)
     }
+}
+
+/// Reads ruv.toml, resolves all dependencies, writes ruv.lock, and prints progress.
+/// Exits the process on error.
+fn run_lock(verbose: bool) {
+    let config = read_config().unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    let root_deps: Vec<_> = config
+        .project
+        .dependencies
+        .iter()
+        .map(|d| parse_dep(d))
+        .collect();
+    let root_names: Vec<String> = root_deps.iter().map(|d| d.name.clone()).collect();
+
+    let t = Instant::now();
+    let index = fetch_cran_index();
+    let resolved = resolve_all(&root_deps, &index, verbose).unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    println!(
+        "Resolved {} packages in {}",
+        resolved.len(),
+        fmt_duration(t.elapsed().as_millis())
+    );
+
+    write_lockfile(&root_names, &resolved, &index);
 }
 
 fn main() {
@@ -127,31 +179,7 @@ fn main() {
         }
 
         Commands::Lock => {
-            let config = read_config().unwrap_or_else(|e| {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            });
-            let root_deps: Vec<_> = config
-                .project
-                .dependencies
-                .iter()
-                .map(|d| parse_dep(d))
-                .collect();
-            let root_names: Vec<String> = root_deps.iter().map(|d| d.name.clone()).collect();
-
-            let t = Instant::now();
-            let index = fetch_cran_index();
-            let resolved = resolve_all(&root_deps, &index, verbose).unwrap_or_else(|e| {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            });
-            println!(
-                "Resolved {} packages in {}",
-                resolved.len(),
-                fmt_duration(t.elapsed().as_millis())
-            );
-
-            write_lockfile(&root_names, &resolved, &index);
+            run_lock(verbose);
         }
 
         Commands::Sync { offline } => {
@@ -192,7 +220,14 @@ fn main() {
 
             let t = Instant::now();
             let locked = read_lockfile();
-            let packages = build_urls_from_pairs(&locked);
+            let lock_r_version = read_lockfile_r_version();
+            if lock_r_version.is_none() {
+                eprintln!(
+                    "warning: ruv.lock does not record an R version (old format) — \
+                     using system R for binary URLs. Re-run `ruv lock` to fix."
+                );
+            }
+            let packages = build_urls_from_pairs(&locked, lock_r_version.as_deref());
             println!(
                 "Resolved {} packages in {}",
                 locked.len(),
@@ -221,10 +256,14 @@ fn main() {
                 );
             }
 
-            if let Some(constraint) = &config.project.r_version {
-                let installation = r_version::select_r(constraint).or_else(|_| {
+            let constraint = r_version::resolve_r_constraint(config.project.r_version.as_deref());
+            if let Some(constraint) = constraint {
+                if r_version::read_r_version_file().is_some() {
+                    println!("Using r-version from .r-version file: {}", constraint);
+                }
+                let installation = r_version::select_r(&constraint).or_else(|_| {
                     println!("  R {} not found locally, downloading...", constraint);
-                    r_version::auto_install_r(constraint)
+                    r_version::auto_install_r(&constraint)
                 });
                 match installation {
                     Ok(inst) => {
@@ -253,13 +292,73 @@ fn main() {
             }) {
                 AddDependencyResult::Added => {
                     println!("added \"{}\" to ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to install");
                 }
                 AddDependencyResult::AlreadyPresent => {
-                    println!("\"{}\" is already in ruv.toml", package);
-                    println!("next: run `ruv lock && ruv sync`");
+                    println!("\"{}\" is already in ruv.toml — nothing to do", package);
                 }
             }
+        }
+
+        Commands::Remove { package } => {
+            match remove_dependency(&package).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }) {
+                RemoveDependencyResult::Removed => {
+                    println!("removed \"{}\" from ruv.toml", package);
+                    run_lock(verbose);
+                    println!("next: run `ruv sync` to apply");
+                }
+                RemoveDependencyResult::NotFound => {
+                    eprintln!("error: \"{}\" is not in ruv.toml", package);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Migrate {
+            source: MigrateSource::Renv { renv_file },
+        } => {
+            let renv_path = std::path::Path::new(&renv_file);
+            let result = renv_migrate::parse_renv_lock(renv_path).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            });
+
+            let project_name = std::env::current_dir()
+                .ok()
+                .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "my-project".to_string());
+
+            println!(
+                "Migrating {} packages from {} (R {})...",
+                result.packages.len(),
+                renv_file,
+                result.r_version
+            );
+
+            if !result.skipped.is_empty() {
+                eprintln!(
+                    "warning: {} package(s) could not be migrated automatically:",
+                    result.skipped.len()
+                );
+                for (pkg, reason) in &result.skipped {
+                    eprintln!("  {} — {}", pkg, reason);
+                }
+            }
+
+            renv_migrate::write_ruv_toml(&project_name, &result).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            });
+            println!("wrote ruv.toml");
+
+            // Run lock to validate the migrated dependencies resolve correctly
+            run_lock(verbose);
+            println!("next: run `ruv sync` to install the project library");
         }
 
         Commands::Run { args } => {
